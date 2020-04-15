@@ -32,67 +32,58 @@ updated <- which(data$MSW3 %in% tax$IfTransfer_oldSciName) # this wrongly includ
 for (i in 1:length(updated)){
     data$Binomial[updated[i]] <- as.character(tax$SciName[which(tax$IfTransfer_oldSciName == data$MSW3[updated[i]])])
 }
-# this is a real bitch because for some transfers the previous binomial is never mentioned in the table, e.g. Bison_bison)
-# my solution: find matches for species name in the family and hope for the best. 
-# if more than 1sp in family - check taxonomy notes and correct manually)
-
-{# automating the manual process
-    manual[i]
-    genus <- strsplit(manual[i],'_', fixed = TRUE)[[1]][1]
-    MSW3[which(MSW3$MSW05_Genus == genus),5]
-    TAX$SciName[which(TAX$Genus == genus)]
-    }
-data$Binomial[which(data$MSW3 == 'Sus_salvanius')] <- "Porcula_salvania"
-data$Binomial[which(data$MSW3 == 'Vulpes_rueppellii')] <- "Vulpes_rueppelli"
-data$Binomial[which(data$MSW3 == 'Leopardus_colocolo')] <- "Leopardus_colocola"
-data$Binomial[which(data$MSW3 == 'Leopardus_jacobitus')] <- "Leopardus_jacobita"
-data$Binomial[which(data$MSW3 == 'Prionailurus_iriomotensis')] <- "Prionailurus bengalensis" # searched IUCN Red List data
-data$Binomial[which(data$MSW3 == 'Herpestes_brachyurus')] <- "Urva_brachyura"
-data$Binomial[which(data$MSW3 == 'Herpestes_edwardsi')] <- "Urva_edwardsii"
-data$Binomial[which(data$MSW3 == 'Herpestes_javanicus')] <- "Urva_javanica"
-data$Binomial[which(data$MSW3 == 'Herpestes_naso')] <- "Xenogale_naso"
-data$Binomial[which(data$MSW3 == 'Herpestes_urva')] <- "Urva_urva"
-data$Binomial[which(data$MSW3 == 'Herpestes_semitorquatus')] <- "Urva_semitorquata"
-data$Binomial[which(data$MSW3 == 'Herpestes_smithii')] <- "Urva_smithii"
-data$Binomial[which(data$MSW3 == 'Herpestes_vitticollis')] <- "Urva_vitticolla"
-data$Binomial[which(data$MSW3 == 'Conepatus_humboldtii')] <- "Conepatus_chinga"
-data$Binomial[which(data$MSW3 == 'Aonyx_cinerea')] <- "Aonyx_cinereus"
-data$Binomial[which(data$MSW3 == 'Bassaricyon_beddardi')] <- "Bassaricyon_alleni"   # searched IUCN Red List data
-data$Binomial[which(data$MSW3 == 'Bassaricyon_lasius')] <- "Bassaricyon_gabbii"     # searched IUCN Red List data
-data$Binomial[which(data$MSW3 == 'Bassaricyon_pauli')] <- "Bassaricyon_gabbii"      # searched IUCN Red List data
-data$Binomial[which(data$MSW3 == 'Physeter_catodon')] <- "Physeter_macrocephalus"   # searched IUCN Red List data
-data$Binomial[which(data$MSW3 == 'Triaenops_rufus')] <- "Triaenops_menamena"
-data$Binomial[which(data$MSW3 == 'Neoromicia_nanus')] <- "Neoromicia_nana"
-data$Binomial[which(data$MSW3 == 'Chaetophractus_nationi')] <- "Chaetophractus_vellerosus"
-data$Binomial[which(data$MSW3 == 'Neophascogale_lorentzi')] <- "Neophascogale_lorentzii"
-data$Binomial[which(data$MSW3 == 'Ningaui_yvonnae')] <- "Ningaui_yvonneae"
-data$Binomial[which(data$MSW3 == 'Sminthopsis_fuliginosus')] <- "Sminthopsis_griseoventer"
-data$Binomial[which(data$MSW3 == 'Galeopterus_variegates')] <- "Galeopterus_variegatus"
-data$Binomial[which(data$MSW3 == 'Marmosops_dorothea')] <- "Marmosops_noctivagus"   # searched IUCN Red List data
-data$Binomial[which(data$MSW3 == 'Micoureus_paraguayanus')] <- "Marmosa_paraguayana"# searched IUCN Red List data
-data$Binomial[which(data$MSW3 == 'Monodelphis_sorex')] <- "Monodelphis_dimidiata"   # searched IUCN Red List data
-data$Binomial[which(data$MSW3 == 'Monodelphis_theresa')] <- "Monodelphis_scalops"   # searched IUCN Red List data
-data$Binomial[which(data$MSW3 == 'Lepus_microtis')] <- "Lepus_victoriae"            # searched IUCN Red List data
-data$Binomial[which(data$MSW3 == 'Heterocephalus_glaber')] <- "Heterocephalus_glaber"   # wrongly named glader in Burgin 2018
-data$Binomial[which(data$MSW3 == 'Lagidium_peruanum')] <- "Lagidium_viscacia"       # searched IUCN Red List data
-data$Binomial[which(data$MSW3 == 'Abrothrix_olivaceus')] <- "Abrothrix_olivacea"
-data$Binomial[which(data$MSW3 == 'Akodon_molinae')] <- "Akodon_dolores"
-data$Binomial[which(data$MSW3 == 'Microtus_bavaricus')] <- "Microtus_liechtensteini"
-data$Binomial[which(data$MSW3 == 'Phyllomys_blainvillii')] <- "Phyllomys_blainvillii"   # missing one 'l' in Burgin 2018  
-data$Binomial[which(data$MSW3 == 'Sphiggurus_villosus')] <- "Coendou_spinosus"      # searched IUCN Red List data
-data$Binomial[which(data$MSW3 == 'Orthogeomys_cuniculus')] <- "Orthogeomys_grandis"
-data$Binomial[which(data$MSW3 == 'Pseudomys_pilligaensis')] <- "Pseudomys_pilligaensis" # not in Burgin but valid in IUCN
-data$Binomial[which(data$MSW3 == 'Hylopetes_lepidus')] <- "Hylopetes_sagitta"
-data$Binomial[which(data$MSW3 == 'Sorex_bairdi')] <- "Sorex_bairdii"
-data$Binomial[which(data$MSW3 == 'Abrothrix_andinux')] <- "Abrothrix_andina"
-
-data$Binomial[which(data$MSW3 == 'Herpestes_smithii')] <- "Urva_smithii"
-data$Binomial[which(data$MSW3 == 'Herpestes_smithii')] <- "Urva_smithii"
-data$Binomial[which(data$MSW3 == 'Herpestes_smithii')] <- "Urva_smithii"
-data$Binomial[which(data$MSW3 == 'Herpestes_smithii')] <- "Urva_smithii"
-data$Binomial[which(data$MSW3 == 'Herpestes_smithii')] <- "Urva_smithii"
-data$Binomial[which(data$MSW3 == 'Herpestes_smithii')] <- "Urva_smithii"
-
+# this is a real bitch because the 'genus transfer' and 'taxonomy notes' columns are inconsistent. For some 
+# transfers the previous binomial is never mentioned in the table, e.g. Bison_bison). 
+# SOLUTION: finding matches for sp. name in its family (that's what the loop below does). For families w >1 match 
+# I checked taxonomy and IUCN website and corrected manually)
+data$Binomial[which(data$MSW3 == "Sus_salvanius")] <- "Porcula_salvania"
+data$Binomial[which(data$MSW3 == "Vulpes_rueppellii")] <- "Vulpes_rueppelli"
+data$Binomial[which(data$MSW3 == "Leopardus_colocolo")] <- "Leopardus_colocola"
+data$Binomial[which(data$MSW3 == "Leopardus_jacobitus")] <- "Leopardus_jacobita"
+data$Binomial[which(data$MSW3 == "Prionailurus_iriomotensis")] <- "Prionailurus bengalensis" # searched IUCN Red List data
+data$Binomial[which(data$MSW3 == "Herpestes_brachyurus")] <- "Urva_brachyura"
+data$Binomial[which(data$MSW3 == "Herpestes_edwardsi")] <- "Urva_edwardsii"
+data$Binomial[which(data$MSW3 == "Herpestes_javanicus")] <- "Urva_javanica"
+data$Binomial[which(data$MSW3 == "Herpestes_naso")] <- "Xenogale_naso"
+data$Binomial[which(data$MSW3 == "Herpestes_urva")] <- "Urva_urva"
+data$Binomial[which(data$MSW3 == "Herpestes_semitorquatus")] <- "Urva_semitorquata"
+data$Binomial[which(data$MSW3 == "Herpestes_smithii")] <- "Urva_smithii"
+data$Binomial[which(data$MSW3 == "Herpestes_vitticollis")] <- "Urva_vitticolla"
+data$Binomial[which(data$MSW3 == "Conepatus_humboldtii")] <- "Conepatus_chinga"
+data$Binomial[which(data$MSW3 == "Aonyx_cinerea")] <- "Aonyx_cinereus"
+data$Binomial[which(data$MSW3 == "Bassaricyon_beddardi")] <- "Bassaricyon_alleni"   # searched IUCN Red List data
+data$Binomial[which(data$MSW3 == "Bassaricyon_lasius")] <- "Bassaricyon_gabbii"     # searched IUCN Red List data
+data$Binomial[which(data$MSW3 == "Bassaricyon_pauli")] <- "Bassaricyon_gabbii"      # searched IUCN Red List data
+data$Binomial[which(data$MSW3 == "Physeter_catodon")] <- "Physeter_macrocephalus"   # searched IUCN Red List data
+data$Binomial[which(data$MSW3 == "Triaenops_rufus")] <- "Triaenops_menamena"
+data$Binomial[which(data$MSW3 == "Neoromicia_nanus")] <- "Neoromicia_nana"
+data$Binomial[which(data$MSW3 == "Chaetophractus_nationi")] <- "Chaetophractus_vellerosus"
+data$Binomial[which(data$MSW3 == "Neophascogale_lorentzi")] <- "Neophascogale_lorentzii"
+data$Binomial[which(data$MSW3 == "Ningaui_yvonnae")] <- "Ningaui_yvonneae"
+data$Binomial[which(data$MSW3 == "Sminthopsis_fuliginosus")] <- "Sminthopsis_griseoventer"
+data$Binomial[which(data$MSW3 == "Galeopterus_variegates")] <- "Galeopterus_variegatus"
+data$Binomial[which(data$MSW3 == "Marmosops_dorothea")] <- "Marmosops_noctivagus"   # searched IUCN Red List data
+data$Binomial[which(data$MSW3 == "Micoureus_paraguayanus")] <- "Marmosa_paraguayana"# searched IUCN Red List data
+data$Binomial[which(data$MSW3 == "Monodelphis_sorex")] <- "Monodelphis_dimidiata"   # searched IUCN Red List data
+data$Binomial[which(data$MSW3 == "Monodelphis_theresa")] <- "Monodelphis_scalops"   # searched IUCN Red List data
+data$Binomial[which(data$MSW3 == "Lepus_microtis")] <- "Lepus_victoriae"            # searched IUCN Red List data
+data$Binomial[which(data$MSW3 == "Heterocephalus_glaber")] <- "Heterocephalus_glaber"   # wrongly named glader in Burgin 2018
+data$Binomial[which(data$MSW3 == "Lagidium_peruanum")] <- "Lagidium_viscacia"       # searched IUCN Red List data
+data$Binomial[which(data$MSW3 == "Abrothrix_olivaceus")] <- "Abrothrix_olivacea"
+data$Binomial[which(data$MSW3 == "Akodon_molinae")] <- "Akodon_dolores"
+data$Binomial[which(data$MSW3 == "Microtus_bavaricus")] <- "Microtus_liechtensteini"
+data$Binomial[which(data$MSW3 == "Phyllomys_blainvillii")] <- "Phyllomys_blainvillii"   # missing one 'l' in Burgin 2018  
+data$Binomial[which(data$MSW3 == "Sphiggurus_villosus")] <- "Coendou_spinosus"      # searched IUCN Red List data
+data$Binomial[which(data$MSW3 == "Orthogeomys_cuniculus")] <- "Orthogeomys_grandis"
+data$Binomial[which(data$MSW3 == "Pseudomys_pilligaensis")] <- "Pseudomys_pilligaensis" # not in Burgin but valid in IUCN
+data$Binomial[which(data$MSW3 == "Hylopetes_lepidus")] <- "Hylopetes_sagitta"
+data$Binomial[which(data$MSW3 == "Sorex_bairdi")] <- "Sorex_bairdii"
+data$Binomial[which(data$MSW3 == "Abrothrix_andinus")] <- "Abrothrix_andina"
+data$Binomial[which(data$MSW3 == "Kunia_fronto")] <- "Gyldenstolpia_fronto"
+data$Binomial[which(data$MSW3 == "Cercopithecus_preussi")] <- "Allochrocebus_preussi"
+data$Binomial[which(data$MSW3 == "Vampyressa_bidens")] <- "Vampyriscus_bidens"
+data$Binomial[which(data$MSW3 == "Naemorhedus_caudatus")] <- "Naemorhedus_caudatus" # 'Nemorhaedus' in Burgin but I kept this name to comply with phylogeny
+data$Binomial[which(data$MSW3 == "Naemorhedus_goral")] <- "Naemorhedus_goral"       # 'Nemorhaedus' in Burgin but I kept this name to comply with phylogeny
 
 manual <- data$MSW3[which(data$Binomial == "NA")]
 manual <- manual[which(manual %in% MCCtree$tip.label)]    # this is really shit so only updating species included in the phylogeny
@@ -105,7 +96,4 @@ for (i in 1:length(manual)){
         confams <- c(confams, strsplit(fam[j], '_', fixed = TRUE)[[1]][2])
     }
     data$Binomial[which(data$MSW3 == manual[i])] <- fam[which(confams == spp)] # this should be it
-    print(data$Binomial[which(data$MSW3 == manual[i])], fam[which(confams == spp)])
 }
-
-which(TAX[,] == paste0(strsplit(as.character(TAX$TaxonomyNotes[90]), 'moved to ', fixed = TRUE)[[1]][2],"_bison") 
