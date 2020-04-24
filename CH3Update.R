@@ -97,3 +97,58 @@ for (i in 1:length(manual)){
     }
     data$Binomial[which(data$MSW3 == manual[i])] <- fam[which(confams == spp)] # this should be it
 }
+
+# remove 24 crepuscular species
+length(which(data$Diel.activity.pattern == 'Crepuscular')) == 24
+data <- data[-which(data$Diel.activity.pattern == 'Crepuscular'),]
+# remove 402 species not in phylogeny
+length(which(!data$Binomial %in% MCCtree$tip.label)) == 539 # Faurby 2015 phylogeny follows MSW3 binomials
+length(which(!data$MSW3 %in% MCCtree$tip.label)) == 402
+act <- data[-which(!data$MSW3 %in% MCCtree$tip.label),]
+
+act$Diel.activity.pattern <- as.character(act$Diel.activity.pattern)
+act$Diel.activity.pattern[act$Diel.activity.pattern == 'Nocturnal'] <- 1
+act$Diel.activity.pattern[act$Diel.activity.pattern == 'Cathemeral'] <- 2
+act$Diel.activity.pattern[act$Diel.activity.pattern == 'Diurnal'] <- 3
+
+## preparing MuSSE arguments
+states <- as.numeric(act$Diel.activity.pattern)
+names(states) <- act$MSW3
+
+## calculate proportion of sampled species correcting for *KNOWN* biases given updated taxonomy (836 bats presumed 
+## nocturnal, 94 primates and 93 squirrels presumed diurnal, and assuming unbiased sampling for all other species
+## the below section is written this way in case any assumptions about the AP of missing species are needed
+
+# total count in the entire dataset (inc species not in Faurby 2015 phylogeny)
+TotN <- length(which(dat$Diel.activity.pattern == 'Nocturnal'))
+TotC <- length(which(dat$Diel.activity.pattern == 'Cathemeral'))
+TotD <- length(which(dat$Diel.activity.pattern == 'Diurnal'))
+# proportions in data
+datN <- TotN / (TotN+TotC+TotD)
+datC <- TotC / (TotN+TotC+TotD)
+datD <- TotD / (TotN+TotC+TotD)
+
+## ** assumptions **
+# nocturnal bats
+Nunsamp <- length(which(tax$Order == 'CHIROPTERA')) - length(which(act$Order == 'Chiroptera')) - 6  # unsampled bats minus 6 extinct spp
+# diurnal squirrels
+Dunsamp <- length(which(tax$Family == 'SCIURIDAE')) - length(which(act$Family == 'Sciuridae'))      # unsampled sciurids (all extant)
+# diurnal Haplorhini
+Dprims <- c("ATELIDAE","CEBIDAE","CERCOPITHECIDAE","PITHECIIDAE","HOMINIDAE","HYLOBATIDAE")         # Haplorhine families
+TAX[which(TAX$Family %in% Dprims),] -> primD    # all Haplorhines
+length(which(primD$extinct. == 0)) == 359       # only extant species
+length(which(TAX$Genus == 'Aotus')) == 11       # 11 night monkies to remove
+Dunsamp <- Dunsamp + 348
+
+# species with no data or assumptions
+unkn <- 6399-(nrow(dat)+Nunsamp+Dunsamp)  # total number of extant species taken from Burgin 2018 abstract
+# expected species out of unknown if same proportion as in the data
+expN <- datN * unkn
+expC <- datC * unkn
+expD <- datD * unkn
+# proportion sampled out of likely total
+Nprop <- TotN / (TotN + Nunsamp + expN)
+Cprop <- TotC / (TotC + expC)
+Dprop <- TotD / (TotD + Dunsamp + expD)
+
+freq <- c(Nprop, Cprop, Dprop)
