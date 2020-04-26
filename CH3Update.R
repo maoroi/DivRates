@@ -1,5 +1,6 @@
 # Updating Chapter 3 to include Faurby & Svenning (2015) phylogeny and Burgin et al. (2018) taxonomy
 require("ape")
+require("diversitree")
 require("phangorn")
 require("phytools")
 
@@ -129,11 +130,11 @@ datC <- TotC / (TotN+TotC+TotD)
 datD <- TotD / (TotN+TotC+TotD)
 
 ## ** assumptions **
-# nocturnal bats
+# nocturnal bats (n=1162)
 Nunsamp <- length(which(tax$Order == 'CHIROPTERA')) - length(which(act$Order == 'Chiroptera')) - 6  # unsampled bats minus 6 extinct spp
-# diurnal squirrels
+# diurnal squirrels (n=144)
 Dunsamp <- length(which(tax$Family == 'SCIURIDAE')) - length(which(act$Family == 'Sciuridae'))      # unsampled sciurids (all extant)
-# diurnal Haplorhini
+# diurnal Haplorhini (n=348)
 Dprims <- c("ATELIDAE","CEBIDAE","CERCOPITHECIDAE","PITHECIIDAE","HOMINIDAE","HYLOBATIDAE")         # Haplorhine families
 TAX[which(TAX$Family %in% Dprims),] -> primD    # all Haplorhines
 length(which(primD$extinct. == 0)) == 359       # only extant species
@@ -152,3 +153,73 @@ Cprop <- TotC / (TotC + expC)
 Dprop <- TotD / (TotD + Dunsamp + expD)
 
 freq <- c(Nprop, Cprop, Dprop)
+
+# the MCC tree is not precisely ultrametric, so I use code from Liam Revell's phytools blog: http://blog.phytools.org/2017/03/forceultrametric-method-for-ultrametric.html
+force.ultrametric <- function(tree,method=c("nnls","extend")){
+    method<-method[1]
+    if(method=="nnls") tree <- nnls.tree(cophenetic(tree),tree, rooted=TRUE,trace=0)
+    else if(method=="extend"){
+        h<-diag(vcv(tree))
+        d<-max(h)-h
+        ii<-sapply(1:Ntip(tree),function(x,y) which(y==x),
+                   y=tree$edge[,2])
+        tree$edge.length[ii]<-tree$edge.length[ii]+d
+    } else 
+        cat("method not recognized: returning input tree\n\n")
+    tree
+}
+
+is.ultrametric(MCCtree)
+MCCphy <- force.ultrametric(MCCtree, "nnls")
+is.ultrametric(MCCphy)
+
+MCCphy <- drop.tip(MCCphy, MCCphy$tip.label[which(!MCCphy$tip.label %in% act$MSW3)])
+
+## MuSSE (3 state dataset)
+lik <- make.musse(MCCphy, states, 3, sampling.f=freq, strict=TRUE, control=list())
+p <- starting.point.musse(MCCphy, 3)
+prior <- make.prior.exponential(1/(2 * (p[1] - p[4])))
+
+## Null model: diversification equal for all states, transition rates follow ordered model
+lik.base <- constrain(lik, lambda2 ~ lambda1, lambda3 ~ lambda1, mu2 ~ mu1, mu3 ~ mu1, q13 ~ 0, q31 ~ 0)
+fit.base <- find.mle(lik.base, p[argnames(lik.base)])
+## running an MCMC instead of ML
+samples.b <- mcmc(lik.base, coef(fit.base), nstep = 1000, w = 1, prior = prior, print.every = 50)
+# saving to file
+write.table(samples.b, file=paste('MCC_ALL_MuSSE_transitions_only.csv', sep=''), 
+            append = FALSE, quote = TRUE, sep=',', eol = "\n", na = "NA", dec = ".", 
+            row.names = FALSE, col.names = TRUE, qmethod = c("escape", "double"), fileEncoding = "")
+pdf(file=paste('MCC_ALL_MuSSE_transitions_only.pdf', sep=''), height=6, width=8)
+#cols <- c('dodgerblue3','#22dd11','darkgoldenrod2')
+profiles.plot(samples.b[2:7], lwd = 1, col.line = c('dodgerblue4','#22b211','darkgoldenrod3'), 
+              col.fill = alpha(c('forestgreen','orange','firebrick','cornflowerblue','cyan','purple'), alpha=0.8), 
+              opacity = 0.2, n.br = 100)
+dev.off()
+
+# Diversification unconstrained, ordered model (AP distrib patterns due to diversification rates alone, not transition rates)
+lik.div <- constrain(lik, q13 ~ 0, q21 ~ q12, q23 ~ q12, q31 ~ 0, q32 ~ q12)
+fit.div <- find.mle(lik.div, p[argnames(lik.div)])
+## running an MCMC instead of ML
+samples.d <- mcmc(lik.div, coef(fit.div), nstep = 1000, w = 1, prior = prior, print.every = 50)
+write.table(samples.d, file=paste('MCC_ALL_MuSSE_diversification_only.csv', sep=''), 
+            append = FALSE, quote = TRUE, sep=',', eol = "\n", na = "NA", dec = ".", 
+            row.names = FALSE, col.names = TRUE, qmethod = c("escape", "double"), fileEncoding = "")
+pdf(file=paste('MCC_ALL_MuSSE_diversification_only.pdf', sep=''), height=6, width=8)
+#cols <- c('dodgerblue3','#22dd11','darkgoldenrod2')
+profiles.plot(samples.d[2:4], lwd = 1, col.line = c('dodgerblue4','#22b211','darkgoldenrod3'), 
+              col.fill = alpha(c('dodgerblue3','#22dd11','darkgoldenrod2'), alpha=0.8), opacity = 0.2, n.br = 100)
+dev.off()
+
+## diversification unconstrained, ordered character-change model
+lik.free <- constrain(lik, q13 ~ 0, q31 ~ 0)        
+fit.free <- find.mle(lik.free, p[argnames(lik.free)])
+## running an MCMC instead of ML
+samples.f <- mcmc(lik.free, coef(fit.free), nstep = 1000, w = 1, prior = prior, print.every = 50)
+write.table(samples.f, file=paste('MCC_ALL_MuSSE_transition_diversification.csv', sep=''), 
+            append = FALSE, quote = TRUE, sep=',', eol = "\n", na = "NA", dec = ".", 
+            row.names = FALSE, col.names = TRUE, qmethod = c("escape", "double"), fileEncoding = "")
+pdf(file=paste('MCC_ALL_MuSSE_transition_diversification.pdf', sep=''), height=6, width=8)
+#cols <- c('dodgerblue3','#22dd11','darkgoldenrod2')
+profiles.plot(samples.f[2:4], lwd = 1, col.line = c('dodgerblue4','#22b211','darkgoldenrod3'), 
+              col.fill = alpha(c('dodgerblue3','#22dd11','darkgoldenrod2'), alpha=0.8), opacity = 0.2, n.br = 100)
+dev.off()
