@@ -3,6 +3,7 @@ require("ape")
 require("diversitree")
 require("phangorn")
 require("phytools")
+require("scales")
 
 ### 1. Data preparation
 ##  1.1 Taxonomy
@@ -364,9 +365,16 @@ for (k in 1:length(breaks)) {
                 row.names = FALSE, col.names = TRUE, sep=',', append = FALSE, quote = TRUE, eol = "\n", 
                 na = "NA", dec = ".", qmethod = c("escape", "double"), fileEncoding = "")
     pdf(file=paste('MCC_', names(breaks[k]), '_MuSSE_transitions_only.pdf', sep=''), height=6, width=8)
-    profiles.plot(samples.b[2:7], lwd = 1, col.line = c('grey10','grey60','firebrick','cornflowerblue','cyan','purple'), 
+    profiles.plot(samples.b[2:7], lwd = 1, col.line = c('grey10','grey40','firebrick','cornflowerblue','cyan','purple'), 
                   col.fill = alpha(c('grey10','grey60','firebrick','cornflowerblue','cyan','purple'), alpha=0.8), 
                   opacity = 0.2, n.br = 120)
+    #if (k<4) {
+    #    if (k==2) {
+            legend("topright", legend=c('Speciation','Extinction','Noct -> Cath','Cath -> Noct','Cath -> Diur','Diur  -> Cath'),
+                   border = NA, fill=alpha(c('grey10','grey60','firebrick','cornflowerblue','cyan','purple'), alpha=0.8), 
+                   cex = 1.2, bty="n")
+     #   } else {title(ylab = 'Probability density', line=2)}
+    #}  
     dev.off()
     
     ##  Diversification unconstrained, ordered model (AP distrib patterns due to diversification rates alone, not transition rates)
