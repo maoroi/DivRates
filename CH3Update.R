@@ -105,11 +105,11 @@ for (i in 1:length(manual)){
 
 # remove 24 crepuscular species
 length(which(data$Diel.activity.pattern == 'Crepuscular')) == 24
-data <- data[-which(data$Diel.activity.pattern == 'Crepuscular'),]
+dat <- data[-which(data$Diel.activity.pattern == 'Crepuscular'),]
 # remove 402 species not in phylogeny
-length(which(!data$Binomial %in% MCCtree$tip.label)) == 539 # Faurby 2015 phylogeny follows MSW3 binomials
-length(which(!data$MSW3 %in% MCCtree$tip.label)) == 402
-act <- data[-which(!data$MSW3 %in% MCCtree$tip.label),]
+length(which(!dat$Binomial %in% MCCtree$tip.label)) == 539 # Faurby 2015 phylogeny follows MSW3 binomials
+length(which(!dat$MSW3 %in% MCCtree$tip.label)) == 402
+act <- dat[-which(!dat$MSW3 %in% MCCtree$tip.label),]
 
 act$Diel.activity.pattern <- as.character(act$Diel.activity.pattern)
 act$Diel.activity.pattern[act$Diel.activity.pattern == 'Nocturnal'] <- 1
@@ -164,14 +164,14 @@ MCCphy <- drop.tip(MCCphy, MCCphy$tip.label[which(!MCCphy$tip.label %in% act$MSW
 states <- as.numeric(act$Diel.activity.pattern)
 names(states) <- act$MSW3
 
-## calculate proportion of sampled species correcting for *KNOWN* biases given updated taxonomy and assuming 
-## unbiased sampling for all other species. 
+## calculate proportions of APs in sampled species accounting for *KNOWN* biases (incl. species not in the 
+## phylogeny) given the updated taxonomy and assuming unbiased sampling for all other species. 
 ## The below section is written this way in case any assumptions about the AP of missing species are needed
 
 # total count in the entire dataset (inc species not in Faurby 2015 phylogeny)
-TotN <- length(which(dat$Diel.activity.pattern == 'Nocturnal'))
-TotC <- length(which(dat$Diel.activity.pattern == 'Cathemeral'))
-TotD <- length(which(dat$Diel.activity.pattern == 'Diurnal'))
+TotN <- length(which(data$Diel.activity.pattern == 'Nocturnal'))
+TotC <- length(which(data$Diel.activity.pattern == 'Cathemeral'))
+TotD <- length(which(data$Diel.activity.pattern == 'Diurnal'))
 # proportions in data
 datN <- TotN / (TotN+TotC+TotD)
 datC <- TotC / (TotN+TotC+TotD)
@@ -180,30 +180,38 @@ datD <- TotD / (TotN+TotC+TotD)
 ## ** assumptions **
 # nocturnal bats (n=1162)
 Nunsamp <- length(which(tax$Order == 'CHIROPTERA')) - length(which(data$Order == 'Chiroptera')) - 6  # unsampled bats minus 6 extinct spp
+
 # diurnal squirrels (n=113)
 SQRLS <- length(which(tax$Family == 'SCIURIDAE'))                       # all sciurids (all extant)
 SQRLS_DATA <- data[which(data$Family == 'Sciuridae'),]                  # sampled sciurids 
 length(which(TAX$Tribe == 'PTEROMYINI')) == 57                          # all flying squirrels (nocturnal)
 length(which(SQRLS_DATA$Diel.activity.pattern == "Nocturnal")) == 31    # flying squirels in data
 FLY_SQRLS_unsamp <- 57-31
+
 Dunsamp <- SQRLS - nrow(SQRLS_DATA) - FLY_SQRLS_unsamp                  # unsampled scuirids minus unsampled noct sciurids
 Nunsamp <- Nunsamp + FLY_SQRLS_unsamp
-# diurnal Haplorhini (n=348)
-Dprims <- c("ATELIDAE","CEBIDAE","CERCOPITHECIDAE","PITHECIIDAE","HOMINIDAE","HYLOBATIDAE") # Simian families
-TAX[which(TAX$Family %in% Dprims),] -> primD    # all Simiiformes
-length(which(primD$extinct. == 0)) == 359       # only extant species
-length(which(TAX$Genus == 'Aotus')) == 11       # 11 night monkies (not all nocturnal so no assumption made)
-# unsampled nocturnal primates
+
+# diurnal Haplorhini (n=146) 
+Dprims <- c("Atelidae", "Cebidae", "Cercopithecidae", "Pitheciidae", "Hominidae", "Hylobatidae") # Simian families
+TAX[which(TAX$Family %in% toupper(Dprims)),] -> primD               # all Simiiformes INCL. AOTIDAE
+length(which(primD$extinct. == 0)) == 359                           # only extant species
+SIMIAN_DATA <- data[which(data$Family %in% c(Dprims, 'Aotidae')),]  # Aotidae demoted into Cebidae (Aotinae) in Burgin 2018 but data$Family relates to MSW3   
+length(which(TAX$Genus == 'Aotus')) == 11                           # 11 night monkies (not all nocturnal so no assumption made)
+length(which(data$Family == 'Aotidae')) == 8                        # night monkeys in data
+# unsampled nocturnal primates (all extant)
 length(which(TAX$Family == "LORISIDAE")) - length(which(data$Family == "Lorisidae")) == 8
 length(which(TAX$Family == "TARSIIDAE")) - length(which(data$Family == "Tarsiidae")) == 8
 length(which(TAX$Family == "GALAGIDAE")) - length(which(data$Family == "Galagidae")) == 9
 length(which(TAX$Family == "CHEIROGALEIDAE")) - length(which(data$Family == "Cheirogaleidae")) == 26
+Nprims <- 8+8+9+26
 
-Dunsamp <- Dunsamp + (359-11)
+Dunsamp <- Dunsamp + 359 - nrow(SIMIAN_DATA) - (11-8)
+Nunsamp <- Nunsamp + Nprims
+
 ##      ** end assumptions **       ##
 
 # species with no data or assumptions
-unkn <- 6399-(nrow(dat)+Nunsamp+Dunsamp)  # total number of extant species taken from Burgin 2018 abstract
+unkn <- 6399-(nrow(data)+Nunsamp+Dunsamp)  # total number of extant species taken from Burgin 2018 abstract
 # expected species out of unknown if same proportion as in the data
 expN <- datN * unkn
 expC <- datC * unkn
@@ -299,9 +307,8 @@ breaks <- c(breaks, getMRCA(MCCphy, c('Felovia_vae','Akodon_dayi')))            
 names(breaks) <- c("Primates", "Carnivora","Artiodactyla","Rodentia")
 
 for (k in 1:length(breaks)) {
-    Partdat <- dat[which(dat$Order == breaks[k]),]          # data for the order
-    
-    OrdTax <- TAX[which(TAX$Order == toupper(breaks[k])),]  # total extant species in new taxonomy
+    Partdat <- data[which(data$Order == names(breaks)[k]),]         # data for the order
+    OrdTax <- TAX[which(TAX$Order == toupper(names(breaks)[k])),]   # total extant species in new taxonomy
     totspp <- length(which(OrdTax$extinct. == 0))
     
     # total count in the entire dataset (inc species not in Faurby 2015 phylogeny)
@@ -314,19 +321,22 @@ for (k in 1:length(breaks)) {
     datD <- TotD / (TotN+TotC+TotD)
     
     ## ** assumptions **
-    Nunsamp = 0
     Dunsamp = 0
+    Nunsamp = 0
+    
     if (k == 1) {   # primates
-        # diurnal simiiformes (n=348) calculated in the all-mammalia section
-        Dunsamp <- 348
-        length(which(TAX$Family == 'TARSIIDAE')) == 13  # 13 nocturnal tarsiers
-        Nunsamp <- 13
-        
+        # diurnal simiiformes (n=146)
+        Dunsamp <- 359 - nrow(SIMIAN_DATA) - (11-8)
+        # nocturnal tarsiers, galagos & lorises (n=51)
+        Nunsamp <- Nprims
     }
     if (k == 4) {   # rodentia
-        # diurnal squirrels (n=144)
-        Dunsamp <- length(which(tax$Family == 'SCIURIDAE')) - length(which(data$Family == 'Sciuridae'))      # unsampled sciurids (all extant)
+        # diurnal squirrels (n=87)
+        Dunsamp <- SQRLS - nrow(SQRLS_DATA) - FLY_SQRLS_unsamp      # unsampled sciurids (all extant)
+        # nocturnal flying squirrels (n=26) 
+        Nunsamp <- FLY_SQRLS_unsamp
     }
+    
     # species with no data or assumptions
     unkn <- totspp-(nrow(Partdat)+Nunsamp+Dunsamp)  # total number of extant species taken from Burgin 2018 abstract
     # expected species out of unknown if same proportion as in the data
