@@ -350,6 +350,36 @@ for (k in 1:length(breaks)) {
     
     freq <- c(Nprop, Cprop, Dprop)
     
+    
+    ##  MuSSE models
+    phy <- extract.clade(MCCphy, breaks[k])
+    lik <- make.musse(phy, states, 3, sampling.f=freq, strict=TRUE, control=list())
+    p <- starting.point.musse(phy, 3)
+    prior <- make.prior.exponential(1/(2 * (p[1] - p[4])))
+    
+    lik.base <- constrain(lik, lambda2 ~ lambda1, lambda3 ~ lambda1, mu2 ~ mu1, mu3 ~ mu1, q13 ~ 0, q31 ~ 0)
+    fit.base <- find.mle(lik.base, p[argnames(lik.base)])
+    samples.b <- mcmc(lik.base, coef(fit.base), nstep = 1000, w = 1, prior = prior, print.every = 50)
+    write.table(samples.b, file=paste('MCC_', names(breaks[k]), '_MuSSE_transitions_only.csv', sep=''), 
+                row.names = FALSE, col.names = TRUE, sep=',', append = FALSE, quote = TRUE, eol = "\n", 
+                na = "NA", dec = ".", qmethod = c("escape", "double"), fileEncoding = "")
+    pdf(file=paste('MCC_', names(breaks[k]), '_MuSSE_transitions_only.pdf', sep=''), height=6, width=8)
+    profiles.plot(samples.b[2:7], lwd = 1, col.line = c('grey10','grey60','firebrick','cornflowerblue','cyan','purple'), 
+                  col.fill = alpha(c('grey10','grey60','firebrick','cornflowerblue','cyan','purple'), alpha=0.8), 
+                  opacity = 0.2, n.br = 120)
+    dev.off()
+    
+    ##  Diversification unconstrained, ordered model (AP distrib patterns due to diversification rates alone, not transition rates)
+    lik.div <- constrain(lik, q13 ~ 0, q21 ~ q12, q23 ~ q12, q31 ~ 0, q32 ~ q12)
+    fit.div <- find.mle(lik.div, p[argnames(lik.div)])
+    samples.d <- mcmc(lik.div, coef(fit.div), nstep = 1000, w = 1, prior = prior, print.every = 50)
+    write.table(samples.d, file=paste('MCC_', names(breaks[k]), '_MuSSE_diversification_only.csv', sep=''), 
+                row.names = FALSE, col.names = TRUE, sep=',', append = FALSE, quote = TRUE, eol = "\n", 
+                na = "NA", dec = ".", qmethod = c("escape", "double"), fileEncoding = "")
+    pdf(file=paste('MCC_', names(breaks[k]), '_MuSSE_diversification_only.pdf', sep=''), height=6, width=8)
+    profiles.plot(samples.d[2:4], lwd = 1, col.line = c('dodgerblue4','#22b211','darkgoldenrod3'), n.br = 80, 
+                  col.fill = alpha(c('dodgerblue3','#22dd11','darkgoldenrod2'), alpha=0.8), opacity = 0.2)
+    dev.off()
 }    
 
 
