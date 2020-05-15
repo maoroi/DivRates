@@ -118,27 +118,6 @@ act$Diel.activity.pattern[act$Diel.activity.pattern == 'Cathemeral'] <- 2
 act$Diel.activity.pattern[act$Diel.activity.pattern == 'Diurnal'] <- 3
 
 ##  1.4 iron out Phylogeny
-# the MCC tree is not precisely ultrametric, so I use code from Liam Revell's phytools blog: http://blog.phytools.org/2017/03/forceultrametric-method-for-ultrametric.html
-force.ultrametric <- function(tree,method=c("nnls","extend")){
-    method<-method[1]
-    if(method=="nnls") tree <- nnls.tree(cophenetic(tree),tree, rooted=TRUE,trace=0)
-    else if(method=="extend"){
-        h<-diag(vcv(tree))
-        d<-max(h)-h
-        ii<-sapply(1:Ntip(tree),function(x,y) which(y==x),
-                   y=tree$edge[,2])
-        tree$edge.length[ii]<-tree$edge.length[ii]+d
-    } else 
-        cat("method not recognized: returning input tree\n\n")
-    tree
-}
-
-is.ultrametric(MCCtree)
-MCCphy <- force.ultrametric(MCCtree, "nnls")
-is.ultrametric(MCCphy)
-
-MCCphy <- drop.tip(MCCphy, MCCphy$tip.label[which(!MCCphy$tip.label %in% act$MSW3)])
-
 # the MCC tree is not precisely ultrametric, so I use code from Liam Revell's phytools blog: 
 # http://blog.phytools.org/2017/03/forceultrametric-method-for-ultrametric.html
 force.ultrametric <- function(tree,method=c("nnls","extend")){
@@ -247,6 +226,9 @@ pdf(file=paste('MCC_ALL_MuSSE_transitions_only.pdf', sep=''), height=6, width=8)
 profiles.plot(samples.b[2:7], lwd = 1, col.line = c('grey10','grey60','firebrick','cornflowerblue','cyan','purple'), 
               col.fill = alpha(c('grey10','grey60','firebrick','cornflowerblue','cyan','purple'), alpha=0.8), 
               opacity = 0.2, n.br = 120)
+legend("topright", legend=c('Speciation','Extinction','Noct -> Cath','Cath -> Noct','Cath -> Diur','Diur  -> Cath'),
+       border = NA, fill=alpha(c('grey10','grey60','firebrick','cornflowerblue','cyan','purple'), alpha=0.8), 
+       cex = 1.2, bty="n")
 dev.off()
 
 ##  3.2.2 Diversification unconstrained, ordered model (AP distrib patterns due to diversification rates alone, not transition rates)
@@ -258,7 +240,7 @@ write.table(samples.d, file=paste('MCC_ALL_MuSSE_diversification_only.csv', sep=
             qmethod = c("escape", "double"), fileEncoding = "")
 pdf(file=paste('MCC_ALL_MuSSE_diversification_only.pdf', sep=''), height=6, width=8)
 profiles.plot(samples.d[2:4], lwd = 1, col.line = c('dodgerblue4','#22b211','darkgoldenrod3'), 
-              col.fill = alpha(c('dodgerblue3','#22dd11','darkgoldenrod2'), alpha=0.8), opacity = 0.2, n.br = 80)
+              col.fill = alpha(c('dodgerblue4','#22cc11','darkgoldenrod2'), alpha=0.8), opacity = 0.2, n.br = 40)
 dev.off()
 
 ##  3.2.3 Diversification unconstrained, ordered character-change model
@@ -270,7 +252,7 @@ write.table(samples.f, file=paste('MCC_ALL_MuSSE_transition_diversification.csv'
             qmethod = c("escape", "double"), fileEncoding = "")
 pdf(file=paste('MCC_ALL_MuSSE_transition_diversification.pdf', sep=''), height=6, width=8)
 profiles.plot(samples.f[2:4], lwd = 1, col.line = c('dodgerblue4','#22b211','darkgoldenrod3'), 
-              col.fill = alpha(c('dodgerblue3','#22dd11','darkgoldenrod2'), alpha=0.8), opacity = 0.2, n.br = 100)
+              col.fill = alpha(c('dodgerblue4','#22bb11','darkgoldenrod2'), alpha=0.8), opacity = 0.2, n.br = 40)
 dev.off()
 
 # TODO: add legends, plot in a tiled figure.
@@ -365,9 +347,9 @@ for (k in 1:length(breaks)) {
                 row.names = FALSE, col.names = TRUE, sep=',', append = FALSE, quote = TRUE, eol = "\n", 
                 na = "NA", dec = ".", qmethod = c("escape", "double"), fileEncoding = "")
     pdf(file=paste('MCC_', names(breaks[k]), '_MuSSE_transitions_only.pdf', sep=''), height=6, width=8)
-    profiles.plot(samples.b[2:7], lwd = 1, col.line = c('grey10','grey40','firebrick','cornflowerblue','cyan','purple'), 
+    profiles.plot(samples.b[2:7], lwd = 1.5, col.line = c('grey10','grey40','firebrick','cornflowerblue','cyan','purple'), 
                   col.fill = alpha(c('grey10','grey60','firebrick','cornflowerblue','cyan','purple'), alpha=0.8), 
-                  opacity = 0.2, n.br = 120)
+                  opacity = 0.2, n.br = 40)
     #if (k<4) {
     #    if (k==2) {
             legend("topright", legend=c('Speciation','Extinction','Noct -> Cath','Cath -> Noct','Cath -> Diur','Diur  -> Cath'),
@@ -385,9 +367,33 @@ for (k in 1:length(breaks)) {
                 row.names = FALSE, col.names = TRUE, sep=',', append = FALSE, quote = TRUE, eol = "\n", 
                 na = "NA", dec = ".", qmethod = c("escape", "double"), fileEncoding = "")
     pdf(file=paste('MCC_', names(breaks[k]), '_MuSSE_diversification_only.pdf', sep=''), height=6, width=8)
-    profiles.plot(samples.d[2:4], lwd = 1, col.line = c('dodgerblue4','#22b211','darkgoldenrod3'), n.br = 80, 
-                  col.fill = alpha(c('dodgerblue3','#22dd11','darkgoldenrod2'), alpha=0.8), opacity = 0.2)
+    profiles.plot(samples.d[2:4], lwd = 1.5, col.line = c('dodgerblue4','#22b211','darkgoldenrod3'), n.br = 40, 
+                  col.fill = alpha(c('dodgerblue4','#22cc11','darkgoldenrod2'), alpha=0.8), opacity = 0.2)
     dev.off()
+    
+    ##  Diversification unconstrained, ordered character-change model
+    lik.free <- constrain(lik, q13 ~ 0, q31 ~ 0)        
+    fit.free <- find.mle(lik.free, p[argnames(lik.free)])
+    samples.f <- mcmc(lik.free, coef(fit.free), nstep = 1000, w = 1, prior = prior, print.every = 50)
+    write.table(samples.f, file=paste('MCC_', names(breaks[k]), '_MuSSE_transition_diversification.csv', sep=''), 
+                row.names = FALSE, col.names = TRUE, sep=',', append = FALSE, quote = TRUE, eol = "\n", na = "NA", 
+                dec = ".", qmethod = c("escape", "double"), fileEncoding = "")
+    pdf(file=paste('MCC_', names(breaks[k]), '_MuSSE_transition_diversification.pdf', sep=''), height=6, width=8)
+    profiles.plot(samples.f[2:4], lwd = 1.5, col.line = c('dodgerblue4','#22b211','darkgoldenrod3'), n.br = 40, 
+                  col.fill = alpha(c('dodgerblue4','#22cc11','darkgoldenrod2'), alpha=0.8), opacity = 0.2)
+    dev.off()
+    
+    ## this loop reads all data files for a taxon and plots their likelihood distributions to find the most likely  
+    type <- c('transitions_only','diversification_only','transition_diversification')                               
+    for (i in 1:3) {                                                                                            
+        sam <- read.csv(paste('MCC_',names(breaks[k]),'_MuSSE_',type[i],'.csv',sep=''))                                 
+        curve <- density(sam[,ncol(sam)])                                                                       
+        if (i == 1) {                                                                                           
+            plot(curve, col=i, lwd=2, xlim=c(min(curve$x)-20,max(curve$x)+50))                                
+        } else {                                                                                                
+            lines(curve, col=i, lwd=2)                                                                          
+        }                                                                                                       
+    }                                                                                                           
 }    
 
 
