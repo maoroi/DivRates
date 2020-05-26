@@ -5,17 +5,18 @@ require("phangorn")
 require("phytools")
 require("scales")
 
-### 1. Data preparation
-##  1.1 Taxonomy
+# 1. Data preparation -----------------------------------------------------
+
+# * 1.1 Taxonomy ----------------------------------------------------------
 read.csv("MamTax2018.csv") -> TAX
 TAX[,c(3,4,8,21,34,35)] -> tax      # relevant columns only (also, some species are wrongly marked EXTINCT, e.g. Alcelaphus buselaphus)
 
-##  1.2 Phylogeny (see 1.4)
+# * 1.2 Phylogeny (see also 1.4) ------------------------------------------
 FStree <- read.tree("Small_phylogeny_4125_species.nex")
 clades <- prop.part(FStree)
 MCCtree <- maxCladeCred(FStree, part = clades)
 
-##  1.3 Activity data
+# * 1.3 Activity data -----------------------------------------------------
 read.csv('Appendix_1-ActivityData.csv') -> DATA
 DATA[,c(1:4)] -> dat
 dat[,3] <- gsub(' ', '_', dat[,3], ignore.case = FALSE)
@@ -117,7 +118,7 @@ act$Diel.activity.pattern[act$Diel.activity.pattern == 'Nocturnal'] <- 1
 act$Diel.activity.pattern[act$Diel.activity.pattern == 'Cathemeral'] <- 2
 act$Diel.activity.pattern[act$Diel.activity.pattern == 'Diurnal'] <- 3
 
-##  1.4 iron out Phylogeny
+# * 1.4 Iron out phylogeny ------------------------------------------------
 # the MCC tree is not precisely ultrametric, so I use code from Liam Revell's phytools blog: 
 # http://blog.phytools.org/2017/03/forceultrametric-method-for-ultrametric.html
 force.ultrametric <- function(tree,method=c("nnls","extend")){
@@ -137,13 +138,18 @@ force.ultrametric <- function(tree,method=c("nnls","extend")){
 is.ultrametric(MCCtree)
 MCCphy <- force.ultrametric(MCCtree, "nnls")
 is.ultrametric(MCCphy)
+write.tree(MCCphy, file='MCCphy.nex')
 
 MCCphy <- drop.tip(MCCphy, MCCphy$tip.label[which(!MCCphy$tip.label %in% act$MSW3)])
 
-### 2. Preparing MuSSE arguments
+
+# 2. MuSSE arguments ------------------------------------------------------
+# * 2.1 STATES argument ---------------------------------------------------
 states <- as.numeric(act$Diel.activity.pattern)
 names(states) <- act$MSW3
 
+
+# * 2.2 FREQ argument -----------------------------------------------------
 ## calculate proportions of APs in sampled species accounting for *KNOWN* biases (incl. species not in the 
 ## phylogeny) given the updated taxonomy and assuming unbiased sampling for all other species. 
 ## The below section is written this way in case any assumptions about the AP of missing species are needed
@@ -173,11 +179,11 @@ Nunsamp <- Nunsamp + FLY_SQRLS_unsamp
 
 # diurnal Haplorhini (n=146) 
 Dprims <- c("Atelidae", "Cebidae", "Cercopithecidae", "Pitheciidae", "Hominidae", "Hylobatidae") # Simian families
-TAX[which(TAX$Family %in% toupper(Dprims)),] -> primD               # all Simiiformes INCL. AOTIDAE
-length(which(primD$extinct. == 0)) == 359                           # only extant species
-SIMIAN_DATA <- data[which(data$Family %in% c(Dprims, 'Aotidae')),]  # Aotidae demoted into Cebidae (Aotinae) in Burgin 2018 but data$Family relates to MSW3   
-length(which(TAX$Genus == 'Aotus')) == 11                           # 11 night monkies (not all nocturnal so no assumption made)
-length(which(data$Family == 'Aotidae')) == 8                        # night monkeys in data
+TAX[which(TAX$Family %in% toupper(Dprims)),] -> primD                   # all Simiiformes INCL. AOTIDAE
+length(which(primD$extinct. == 0)) == 359                               # only extant species
+SIMIAN_DATA <- data[which(data$Family %in% c(Dprims, 'Aotidae')),]      # Aotidae demoted into Cebidae (Aotinae) in Burgin 2018 but data$Family relates to MSW3   
+length(which(TAX$Genus == 'Aotus')) == 11                               # 11 night monkies (not all nocturnal so no assumption made)
+length(which(data$Family == 'Aotidae')) == 8                            # night monkeys in data
 # unsampled nocturnal primates (all extant)
 length(which(TAX$Family == "LORISIDAE")) - length(which(data$Family == "Lorisidae")) == 8
 length(which(TAX$Family == "TARSIIDAE")) - length(which(data$Family == "Tarsiidae")) == 8
@@ -187,7 +193,6 @@ Nprims <- 8+8+9+26
 
 Dunsamp <- Dunsamp + 359 - nrow(SIMIAN_DATA) - (11-8)
 Nunsamp <- Nunsamp + Nprims
-
 ##      ** end assumptions **       ##
 
 # species with no data or assumptions
@@ -204,16 +209,19 @@ Dprop <- TotD / (TotD + Dunsamp + expD)
 freq <- c(Nprop, Cprop, Dprop)
 
 
-### 3. MuSSE analyses (3 state dataset)
+# 3. MuSSE analyses (3 state dataset)--------------------------------------
 
-## TODO BAMM analysis
+# * 3.1 BAMM analysis (extrenal code) -------------------------------------
+# TODO insert BAMM input and output file names here
 
-##  3.2 Mammalia wide models
+
+# * 3.2 Mammalia-wide models ----------------------------------------------
 lik <- make.musse(MCCphy, states, 3, sampling.f=freq, strict=TRUE, control=list())
 p <- starting.point.musse(MCCphy, 3)
 prior <- make.prior.exponential(1/(2 * (p[1] - p[4])))
 
-##  3.2.1 Null model: diversification equal for all states, transition rates follow ordered model
+
+# * * 3.2.1 Null model: equal diversification for all APs -----------------
 lik.base <- constrain(lik, lambda2 ~ lambda1, lambda3 ~ lambda1, mu2 ~ mu1, mu3 ~ mu1, q13 ~ 0, q31 ~ 0)
 fit.base <- find.mle(lik.base, p[argnames(lik.base)])
 # running an MCMC instead of ML
@@ -231,7 +239,9 @@ legend("topright", legend=c('Speciation','Extinction','Noct -> Cath','Cath -> No
        cex = 1.2, bty="n")
 dev.off()
 
-##  3.2.2 Diversification unconstrained, ordered model (AP distrib patterns due to diversification rates alone, not transition rates)
+
+# * * 3.2.2 Free diversification, all transition rates equal  -------------
+#   (AP distrib patterns due to diversification alone, not due to transitions)
 lik.div <- constrain(lik, q13 ~ 0, q21 ~ q12, q23 ~ q12, q31 ~ 0, q32 ~ q12)
 fit.div <- find.mle(lik.div, p[argnames(lik.div)])
 samples.d <- mcmc(lik.div, coef(fit.div), nstep = 1000, w = 1, prior = prior, print.every = 50)
@@ -243,7 +253,8 @@ profiles.plot(samples.d[2:4], lwd = 1, col.line = c('dodgerblue4','#22b211','dar
               col.fill = alpha(c('dodgerblue4','#22cc11','darkgoldenrod2'), alpha=0.8), opacity = 0.2, n.br = 40)
 dev.off()
 
-##  3.2.3 Diversification unconstrained, ordered character-change model
+
+# * * 3.2.3 Free diversification, free ordered transitions ----------------
 lik.free <- constrain(lik, q13 ~ 0, q31 ~ 0)        
 fit.free <- find.mle(lik.free, p[argnames(lik.free)])
 samples.f <- mcmc(lik.free, coef(fit.free), nstep = 1000, w = 1, prior = prior, print.every = 50)
@@ -257,26 +268,11 @@ dev.off()
 
 # TODO: add legends, plot in a tiled figure.
 
-#################################################################################################################
-## this loop reads all data files for a taxon and plots their likelihood distributions to find the most likely  #
-                                                                                                                #
-clade <- c("ALL","Primates","Carnivora","Rodentia","Artiodactyla")                                              #
-type <- c('transitions_only','diversification_only','transition_diversification')                               #
-for (k in 1:5) {                                                                                                #
-    for (i in 1:3) {                                                                                            #
-        sam <- read.csv(paste('MCC_',clade[k],'_MuSSE_',type[i],'.csv',sep=''))                                 #
-        curve <- density(sam[,ncol(sam)])                                                                       #
-        if (i == 1) {                                                                                           #
-            plot(curve, col=i, lwd=2, xlim=c(min(curve$x)-100,max(curve$x)+100))                                #
-        } else {                                                                                                #
-            lines(curve, col=i, lwd=2)                                                                          #
-        }                                                                                                       #
-    }                                                                                                           #
-}                                                                                                               #
-#################################################################################################################
 
-##  3.3  Separate analyses for primates, Carnivora, Rodentia, and Artiodactlya
-#   making a list of ancestral nodes for make.musse.split
+# * 3.3 Separate analysis for main orders ---------------------------------
+# (Primates, Carnivora, Rodentia, Artiodactlya)
+
+#   get ancestral nodes
 breaks <- getMRCA(MCCphy, c('Hapalemur_griseus','Pan_paniscus'))                # primates 
 breaks <- c(breaks, getMRCA(MCCphy, c('Nandinia_binotata','Lutra_lutra')))      # Carnivora 
 breaks <- c(breaks, getMRCA(MCCphy, c('Vicugna_vicugna','Ovis_ammon')))         # Cetartiodactyla
@@ -397,4 +393,21 @@ for (k in 1:length(breaks)) {
 }    
 
 
-##  3.4  Partitioned analyses based on the rates shifts found in the BAMM analysis
+# * 3.4 Likelihood comparisons --------------------------------------------
+# this loop reads all data files for a taxon and plots their likelihood 
+# distributions to find the most likely
+
+clade <- c("ALL","Primates","Carnivora","Rodentia","Artiodactyla")              
+type <- c('transitions_only','diversification_only','transition_diversification')  
+for (k in 1:5) {                                                                
+    for (i in 1:3) {                                                            
+        sam <- read.csv(paste('MCC_',clade[k],'_MuSSE_',type[i],'.csv',sep='')) 
+        curve <- density(sam[,ncol(sam)])                                       
+        if (i == 1) {plot(curve, col=i, lwd=2, xlim=c(min(curve$x)-100,max(curve$x)+100))
+        } else {lines(curve, col=i, lwd=2)}                                                                       
+    }                                                                           
+}                                                                               
+
+
+# * 3.5 Partitioned analyses (based on BAMM results) ----------------------
+
