@@ -12,7 +12,7 @@ read.csv("MamTax2018.csv") -> TAX
 TAX[,c(3,4,8,21,34,35)] -> tax      # relevant columns only (also, some species are wrongly marked EXTINCT, e.g. Alcelaphus buselaphus)
 
 # * 1.2 Phylogeny (see also 1.4) ------------------------------------------
-FStree <- read.tree("Small_phylogeny_4125_species.nex")
+FStree <- read.tree("Faurby_Small_4125_species.nex")
 clades <- prop.part(FStree)
 MCCtree <- maxCladeCred(FStree, part = clades)
 
@@ -138,7 +138,7 @@ force.ultrametric <- function(tree,method=c("nnls","extend")){
 is.ultrametric(MCCtree)
 MCCphy <- force.ultrametric(MCCtree, "nnls")
 is.ultrametric(MCCphy)
-write.tree(MCCphy, file='MCCphy.nex')
+#write.tree(MCCphy, file='MCCphy.nex')
 
 MCCphy <- drop.tip(MCCphy, MCCphy$tip.label[which(!MCCphy$tip.label %in% act$MSW3)])
 
@@ -213,6 +213,7 @@ freq <- c(Nprop, Cprop, Dprop)
 
 # * 3.1 BAMM analysis (extrenal code) -------------------------------------
 # TODO insert BAMM input and output file names here
+#### SCRAPPED for now - shifts inserted arbitrarily in roots of main mammal orders/clades ####
 
 
 # * 3.2 Mammalia-wide models ----------------------------------------------
@@ -221,7 +222,7 @@ p <- starting.point.musse(MCCphy, 3)
 prior <- make.prior.exponential(1/(2 * (p[1] - p[4])))
 
 
-# * * 3.2.1 Null model: equal diversification for all APs -----------------
+# ** 3.2.1 Null model: equal diversification for all APs -----------------
 lik.base <- constrain(lik, lambda2 ~ lambda1, lambda3 ~ lambda1, mu2 ~ mu1, mu3 ~ mu1, q13 ~ 0, q31 ~ 0)
 fit.base <- find.mle(lik.base, p[argnames(lik.base)])
 # running an MCMC instead of ML
@@ -240,7 +241,7 @@ legend("topright", legend=c('Speciation','Extinction','Noct -> Cath','Cath -> No
 dev.off()
 
 
-# * * 3.2.2 Free diversification, all transition rates equal  -------------
+# ** 3.2.2 Free diversification, all transition rates equal  -------------
 #   (AP distrib patterns due to diversification alone, not due to transitions)
 lik.div <- constrain(lik, q13 ~ 0, q21 ~ q12, q23 ~ q12, q31 ~ 0, q32 ~ q12)
 fit.div <- find.mle(lik.div, p[argnames(lik.div)])
@@ -254,7 +255,7 @@ profiles.plot(samples.d[2:4], lwd = 1, col.line = c('dodgerblue4','#22b211','dar
 dev.off()
 
 
-# * * 3.2.3 Free diversification, free ordered transitions ----------------
+# ** 3.2.3 Free diversification, free ordered transitions ----------------
 lik.free <- constrain(lik, q13 ~ 0, q31 ~ 0)        
 fit.free <- find.mle(lik.free, p[argnames(lik.free)])
 samples.f <- mcmc(lik.free, coef(fit.free), nstep = 1000, w = 1, prior = prior, print.every = 50)
@@ -392,7 +393,6 @@ for (k in 1:length(breaks)) {
     }                                                                                                           
 }    
 
-
 # * 3.4 Likelihood comparisons --------------------------------------------
 # this loop reads all data files for a taxon and plots their likelihood 
 # distributions to find the most likely
@@ -408,6 +408,90 @@ for (k in 1:5) {
     }                                                                           
 }                                                                               
 
+# * 3.5 Partitioned analyses ----------------------------------------------
 
-# * 3.5 Partitioned analyses (based on BAMM results) ----------------------
+# ** 3.5.1 Define partitions ----------------------------------------------
+
+## making a list of ancestral nodes for make.musse.split (consider adding shifts one branch above and 
+## below each one of these to reflect placement uncertainty)
+breaks <- getMRCA(MCCphy, c('Galago_moholi','Hylobates_lar'))                       # primates
+#breaks <- c(breaks, getMRCA(datatree, c('Tarsius_bancanus','Pan_paniscus')))           # Haplorrhini
+#getMRCA(datatree, c('Papio_anubis','Pan_paniscus'))     # catarrhini - Old world
+#getMRCA(datatree, c('Alouatta_pigra','Callithrix_kuhlii'))  # Platyrrhini - New world
+breaks <- c(breaks, getMRCA(MCCphy, c('Elephas_maximus','Neamblysomus_gunningi')))  # Afrotheria
+#breaks <- c(breaks, getMRCA(datatree, c('Elephantulus_fuscus','Setifer_setosus')))     # Macroscelidea+Afrosoricida 
+breaks <- c(breaks, getMRCA(MCCphy, c('Camelus_dromedarius','Ovis_ammon')))         # Cetartiodactyla
+breaks <- c(breaks, getMRCA(MCCphy, c('Solenodon_cubanus','Sorex_hoyi')))           # Eulypotyphla
+breaks <- c(breaks, getMRCA(MCCphy, c('Tragulus_napu','Cervus_elaphus')))           # Ruminantia
+breaks <- c(breaks, getMRCA(MCCphy, c('Phocoena_phocoena','Eschrichtius_robustus')))# Cetacea
+breaks <- c(breaks, getMRCA(MCCphy, c('Nyctalus_azoreum','Hipposideros_ater')))     # Chiroptera
+breaks <- c(breaks, getMRCA(MCCphy, c('Panthera_leo','Lutra_lutra')))               # Carnivora
+breaks <- c(breaks, getMRCA(MCCphy, c('Glis_glis','Castor_fiber')))                 # Rodentia 
+breaks <- c(breaks, getMRCA(MCCphy, c('Microtus_arvalis','Castor_fiber')))          # castorimorpha
+#breaks <- c(breaks, getMRCA(MCCphy, c('Platacanthomys_lasiurus','Jaculus_jaculus')))   # Myomorpha
+breaks <- c(breaks, getMRCA(MCCphy, c('Glis_glis','Felovia_vae')))                  # Hystricomorpha
+#breaks <- c(breaks, getMRCA(datatree, c('Glis_glis','Aplodontia_rufa')))               # Sciuromorpha
+#breaks <- c(breaks, getMRCA(datatree, c('Sciurus_alleni','Cynomys_leucurus'))          # Sciuridae + Aplodontidae                    # Sciuridae
+
+
+## make likelihood function 
+lik.s <- make.musse.split(MCCphy, states, 3, nodes=breaks, split.t=Inf, sampling.f=freq, strict=TRUE)
+p <- starting.point.musse(MCCphy, 3)
+p.s <- rep(p,(length(breaks)+1))
+names(p.s) <- argnames(lik.s)
+
+
+# ** 3.5.2 Equal diversification among states  ----------------------------
+# Div. rates independent in each tree partition, transition rates follow ordered model (this means AP distribution 
+# is entirely due to character transitions and not speciation or extinction) 
+
+# automate model formulation (this will massively pay off with usage)    
+formula.base <- character()
+qs.base <- character()
+
+for (i in 1:(length(breaks)+1)) {
+    for (param in c("lambda","mu")) {
+        formula.base <- paste0(formula.base, paste0(', ',param,'1.',i,' ~ ',param,'2.',i,', ',param,'3.',i,' ~ ',param,'2.',i)) # the formula for equal diversification and extinction among all states in partition i 
+    }
+    qs.base <- paste0(qs.base, paste0(', q13.',i,'~0, q31.',i,'~0')) # disable nocturnal<->diurnal direct transitions
+}
+formula.base <- paste0('lik.s', formula.base, qs.base)
+## Haven't found a quicker solution than a stupid copy-paste to remove the quotes in the formula
+formula.base
+# "lik.s, lambda1.1 ~ lambda2.1, lambda3.1 ~ lambda2.1, mu1.1 ~ mu2.1, mu3.1 ~ mu2.1, lambda1.2 ~ lambda2.2, lambda3.2 ~ lambda2.2, mu1.2 ~ mu2.2, mu3.2 ~ mu2.2, lambda1.3 ~ lambda2.3, lambda3.3 ~ lambda2.3, mu1.3 ~ mu2.3, mu3.3 ~ mu2.3, lambda1.4 ~ lambda2.4, lambda3.4 ~ lambda2.4, mu1.4 ~ mu2.4, mu3.4 ~ mu2.4, lambda1.5 ~ lambda2.5, lambda3.5 ~ lambda2.5, mu1.5 ~ mu2.5, mu3.5 ~ mu2.5, lambda1.6 ~ lambda2.6, lambda3.6 ~ lambda2.6, mu1.6 ~ mu2.6, mu3.6 ~ mu2.6, lambda1.7 ~ lambda2.7, lambda3.7 ~ lambda2.7, mu1.7 ~ mu2.7, mu3.7 ~ mu2.7, lambda1.8 ~ lambda2.8, lambda3.8 ~ lambda2.8, mu1.8 ~ mu2.8, mu3.8 ~ mu2.8, lambda1.9 ~ lambda2.9, lambda3.9 ~ lambda2.9, mu1.9 ~ mu2.9, mu3.9 ~ mu2.9, lambda1.10 ~ lambda2.10, lambda3.10 ~ lambda2.10, mu1.10 ~ mu2.10, mu3.10 ~ mu2.10, lambda1.11 ~ lambda2.11, lambda3.11 ~ lambda2.11, mu1.11 ~ mu2.11, mu3.11 ~ mu2.11, lambda1.12 ~ lambda2.12, lambda3.12 ~ lambda2.12, mu1.12 ~ mu2.12, mu3.12 ~ mu2.12, q13.1~0, q31.1~0, q13.2~0, q31.2~0, q13.3~0, q31.3~0, q13.4~0, q31.4~0, q13.5~0, q31.5~0, q13.6~0, q31.6~0, q13.7~0, q31.7~0, q13.8~0, q31.8~0, q13.9~0, q31.9~0, q13.10~0, q31.10~0, q13.11~0, q31.11~0, q13.12~0, q31.12~0"
+
+# compute model likelihood
+lik.s.base <- constrain(lik.s, 
+                        lambda1.1 ~ lambda2.1, lambda3.1 ~ lambda2.1, mu1.1 ~ mu2.1, mu3.1 ~ mu2.1, 
+                        lambda1.2 ~ lambda2.2, lambda3.2 ~ lambda2.2, mu1.2 ~ mu2.2, mu3.2 ~ mu2.2, 
+                        lambda1.3 ~ lambda2.3, lambda3.3 ~ lambda2.3, mu1.3 ~ mu2.3, mu3.3 ~ mu2.3, 
+                        lambda1.4 ~ lambda2.4, lambda3.4 ~ lambda2.4, mu1.4 ~ mu2.4, mu3.4 ~ mu2.4, 
+                        lambda1.5 ~ lambda2.5, lambda3.5 ~ lambda2.5, mu1.5 ~ mu2.5, mu3.5 ~ mu2.5, 
+                        lambda1.6 ~ lambda2.6, lambda3.6 ~ lambda2.6, mu1.6 ~ mu2.6, mu3.6 ~ mu2.6, 
+                        lambda1.7 ~ lambda2.7, lambda3.7 ~ lambda2.7, mu1.7 ~ mu2.7, mu3.7 ~ mu2.7, 
+                        lambda1.8 ~ lambda2.8, lambda3.8 ~ lambda2.8, mu1.8 ~ mu2.8, mu3.8 ~ mu2.8, 
+                        lambda1.9 ~ lambda2.9, lambda3.9 ~ lambda2.9, mu1.9 ~ mu2.9, mu3.9 ~ mu2.9, 
+                        lambda1.10 ~ lambda2.10, lambda3.10 ~ lambda2.10, mu1.10 ~ mu2.10, mu3.10 ~ mu2.10, 
+                        lambda1.11 ~ lambda2.11, lambda3.11 ~ lambda2.11, mu1.11 ~ mu2.11, mu3.11 ~ mu2.11, 
+                        lambda1.12 ~ lambda2.12, lambda3.12 ~ lambda2.12, mu1.12 ~ mu2.12, mu3.12 ~ mu2.12, 
+                        q13.1~0, q31.1~0, q13.2~0, q31.2~0, q13.3~0, q31.3~0, q13.4~0, q31.4~0, 
+                        q13.5~0, q31.5~0, q13.6~0, q31.6~0, q13.7~0, q31.7~0, q13.8~0, q31.8~0, 
+                        q13.9~0, q31.9~0, q13.10~0, q31.10~0, q13.11~0, q31.11~0, q13.12~0, q31.12~0)                   
+fit.s.base <- find.mle(lik.s.base, p.s, control=list(maxit=20000))
+
+## Diversification unconstrained, single character transition rate
+# (AP distribution due to diversification rates alone, not transition rates)
+lik.s.div <- constrain(lik.s, q12.1 ~ q21.1, q23.1 ~ q21.1, q32.1 ~ q21.1, q12.2 ~ q21.2, q23.2 ~ q21.2, q32.2 ~ q21.2, 
+                       q12.3 ~ q21.3, q23.3 ~ q21.3, q32.3 ~ q21.3, q12.4 ~ q21.4, q23.4 ~ q21.4, q32.4 ~ q21.4, 
+                       q12.5 ~ q21.5, q23.5 ~ q21.5, q32.5 ~ q21.5, q12.6 ~ q21.6, q23.6 ~ q21.6, q32.6 ~ q21.6, 
+                       q12.7 ~ q21.7, q23.7 ~ q21.7, q32.7 ~ q21.7, 
+                       q13.1~0, q31.1~0, q13.2~0, q31.2~0, q13.3~0, q31.3~0, q13.4~0, q31.4~0, q13.5~0, q31.5~0, q13.6~0, q31.6~0, q13.7~0, q31.7~0)
+fit.s.div <- find.mle(lik.s.div, p.s, control=list(maxit=20000))
+
+## diversification unconstrained, ordered character transition model 
+# (AP distrib patterns due to both diversification and transitions)
+lik.s.free <- constrain(lik.s, q13.1~0, q31.1~0, q13.2~0, q31.2~0, q13.3~0, q31.3~0, q13.4~0, q31.4~0, q13.5~0, q31.5~0, 
+                        q13.6~0, q31.6~0, q13.7~0, q31.7~0)
+fit.s.free <- find.mle(lik.s.free, p.s, control=list(maxit=20000))
+
 
