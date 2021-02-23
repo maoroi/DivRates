@@ -1,0 +1,65 @@
+---
+title: "DivRatesMS"
+author: "Roi Maor"
+date: "16/02/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Methods 
+### Models
+
+CID, diversification increased due to KPg : BiSSE.td (MuSSE.td?)
+
+
+
+
+
+------
+
+* METHODS considerations
+1 - 
+Each hidden state set (i.e. all states of A, or all states of B etc.) represents a trait that affects diversification.
+For example, my focal trait is AP, so trait dependent diversification will not capture diversification increases due to flying habits (bats), gulp feeding (whales), granivory (rodents) etc., but all these cannot be reliably model by a single hidden state, and will require multiple hidden states. 
+
+2 - 
+Use BOTH the MCC tree (based on ALL posterioir trees) AND a range of trees (individually) from the posterior
+
+3 - 
+There should not be more hidden rates than there are hidden states! (see my comment on Nakov 2019, p. 2500)
+
+4 - 
+Meseguer et al. 2020, J Biogeog:
+
+"To account for rate variation, we compared models where diversification rates were allowed to change at 
+distinct time intervals (BiSSE.td). For the latter, we implemented one time shift (two time intervals) 
+and tested different shift times at 3.5, 15, 34 and 66 Ma, which represent periods of environmental
+changes potentially affecting diversification: 3.5 Ma corresponds to the final closure of the Panama 
+Isthmus and the initiation of Northern Hemisphere glaciations (Zachos, Dickens, & Zeebe, 2008); 15 Ma 
+coincides with the first land connections between South and Central Americas (Montes et al., 2015) and 
+the middle Miocene climatic optimum (Zachos et al., 2008); 34 Ma is the opening of the Drake passage (and 
+collateral end of Antarctica–South America connection) with the onset of the Antarctic Circumpolar Current 
+(Scher et al., 2015) and the GAARlandia bridge between North and South Americas (Iturralde-Vinent & MacPhee, 
+1999); 66 Ma is the Cretaceous–Palaeogene mass extinction (Longrich, Bhullar, & Gauthier, 2012). Implementing 
+models with more than one time shift resulted in computationally (20 parameters) intractable analyses for 
+phylogenies with thousands of species." 
+
+"For a character state to be considered a character in state speciation and extinction (SSE) models, it has 
+to be represented in >10% of the species, because the power of the trait-dependent models has been shown to 
+be severely affected when high tip ratio bias is observed (Alves, Diniz-Filho, & Villalobos, 2017; Davis, 
+Midford, & Maddison, 2013)."
+
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+
+```{r}
+
+```
