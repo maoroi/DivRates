@@ -9,7 +9,12 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## Methods 
+## Methods
+### Data
+#### Taxonomy and phylogeny
+1 - Using the Upham 2019 phylogeny requiers updating to the Burgin 2018 taxonomy
+2 - Species 'lumping' in the new taxonomy caused redundancy (duplicate records for the same recognised species). These records did not agree in two species (Monodelphis americana- diurnal and nocturnal; Heterogeomys dariensis- cathemeral and nocturnal) which were consequently assigned 'cathemeral'.
+
 ### Models
 
 CID, diversification increased due to KPg : BiSSE.td (MuSSE.td?)
