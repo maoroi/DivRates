@@ -140,8 +140,8 @@ write.csv(data, file="ActivityData_2018Tax.csv", row.names = FALSE)
 
 
 
-## no need update these because each were unified with an existing entry of same activity pattern
-   {#data$Binomial[which(data$MSW3 == "Alcelaphus_lichtensteinii")] <- "Alcelaphus_buselaphus"
+## no need actually update these species because they were all merged into existing entries w same AP
+{#data$Binomial[which(data$MSW3 == "Alcelaphus_lichtensteinii")] <- "Alcelaphus_buselaphus"
    #data$Binomial[which(data$MSW3 == "Pseudois_schaeferi")] <- "Pseudois_nayaur"          
    #data$Binomial[which(data$MSW3 == "Galidictis_grandidieri")] <- "Galidictis_fasciata"
    #data$Binomial[which(data$MSW3 == "Conepatus_humboldtii")] <- "Conepatus_chinga"
@@ -168,9 +168,8 @@ write.csv(data, file="ActivityData_2018Tax.csv", row.names = FALSE)
    #data$Binomial[which(data$MSW3 == "Pseudomys_pilligaensis")] <- "Pseudomys_delicatulus"
    #data$Binomial[which(data$MSW3 == "Petinomys_sagitta")] <- "Hylopetes_sagitta"           # based on notes in Burgin 2018
 } 
-    
 ## THE BELOW REFERS TO WORKING WITH THE FILE "asm-species-2020-02-04.csv" BUT NOT WITH THE CURRENT "MDD" FILE
-# match binomials after genus transfer - this worked 
+{# match binomials after genus transfer - this worked 
 #transfer <- which(data$MSW3[which(is.na(data$Binomial))] %in% tax$IfTransfer_oldSciName) # this wrongly includes "Leptonycteris_yerbabuenae" which is in MSW3
 #for (i in 1:length(transfer)){
 #    data$Binomial[transfer[i]] <- as.character(tax$SciName[which(tax$IfTransfer_oldSciName == data$MSW3[transfer[i]])])
@@ -181,7 +180,7 @@ write.csv(data, file="ActivityData_2018Tax.csv", row.names = FALSE)
 # matches I checked taxonomy and IUCN website and corrected manually. Manual corrections are placed before the 
 # loop so they don't trip it    
    
-#{data$Binomial[which(data$MSW3 == "Vulpes_rueppellii")] <- "Vulpes_rueppelli" 
+#data$Binomial[which(data$MSW3 == "Vulpes_rueppellii")] <- "Vulpes_rueppelli" 
    #data$Binomial[which(data$MSW3 == "Leopardus_colocolo")] <- "Leopardus_colocola"
    #data$Binomial[which(data$MSW3 == "Herpestes_brachyurus")] <- "Urva_brachyura"
    #data$Binomial[which(data$MSW3 == "Herpestes_javanicus")] <- "Urva_javanica"
@@ -198,7 +197,7 @@ write.csv(data, file="ActivityData_2018Tax.csv", row.names = FALSE)
    #data$Binomial[which(data$MSW3 == "Callicebus_dubius")] <- "Plecturocebus_caligatus"
    #data$Binomial[which(data$MSW3 == "Vampyressa_bidens")] <- "Vampyriscus_bidens"          # the loop fails due to >1 candidates in the family
    #data$Binomial[which(data$MSW3 == "Cercopithecus_preussi")] <- "Allochrocebus_preussi"   # the loop fails due to >1 candidates in the family
-#}
+}
 
 # finding species-name matches in the family (for when the genus transfer notes fall short)
 manual <- data$MSW3[which(is.na(data$Binomial))]
