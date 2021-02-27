@@ -64,7 +64,7 @@ length(which(is.na(data$MDD))) == 129
     data$MDD[which(data$MSW3 == "Proechimys_magdalenae")] <- "Proechimys_chrysaeolus"
     data$MDD[which(data$MSW3 == "Nyctophilus_timoriensis")] <- "Nyctophilus_major"  # taxon split
     data$MDD[which(data$MSW3 == "Micoureus_regina")] <- "Marmosa_isthmica"          # genus transfer and split
-## all species in the next block are name changes that are not flagged as such in the taxonomic datafile    
+## all species in the next block are name changes that are not flagged as such anywhere in the taxonomic data file    
     data$MDD[which(data$MSW3 == "Sus_salvanius")] <- "Porcula_salvania"     # genus transfer and epithet change
     data$MDD[which(data$MSW3 == "Leopardus_jacobitus")] <- "Leopardus_jacobita"
     data$MDD[which(data$MSW3 == "Herpestes_edwardsi")] <- "Urva_edwardsii"  # new genus and epithet spelling
@@ -81,15 +81,15 @@ length(which(is.na(data$MDD))) == 129
     data$MDD[which(data$MSW3 == "Callithrix_nigriceps")] <- "Mico_nigriceps"        # elevated to full genus 
     
     data$MDD[which(data$MSW3 == "Galago_demidoff")] <- "Galagoides_demidovii"       # genus transfer 
-    data$MDD[which(data$MSW3 == )] <- ""   
-    data$MDD[which(data$MSW3 == )] <- ""    
-    data$MDD[which(data$MSW3 == )] <- ""
-    data$MDD[which(data$MSW3 == )] <- ""   
-    data$MDD[which(data$MSW3 == )] <- ""    
-    data$MDD[which(data$MSW3 == )] <- ""      
-    data$MDD[which(data$MSW3 == )] <- ""   
-    data$MDD[which(data$MSW3 == )] <- ""    
-    data$MDD[which(data$MSW3 == )] <- ""      
+    data$MDD[which(data$MSW3 == "Oryzomys_macconnelli")] <- "Euryoryzomys_macconnelli"  # located by tribe (2 hits on epithet in the family)
+    data$MDD[which(data$MSW3 == "Oryzomys_melanotis")] <- "Handleyomys_melanotis"       # located by tribe (2 hits on epithet in the family)
+    data$MDD[which(data$MSW3 == "Coendou_rothschildi")] <- "Coendou_quichua"        # notes in MDD v1.31
+    #data$MDD[which(data$MSW3 == )] <- ""   
+    #data$MDD[which(data$MSW3 == )] <- ""    
+    #data$MDD[which(data$MSW3 == )] <- ""      
+    #data$MDD[which(data$MSW3 == )] <- ""   
+    #data$MDD[which(data$MSW3 == )] <- ""    
+    #data$MDD[which(data$MSW3 == )] <- ""      
     
     
 # technically there's no need to update the below species because these were merged into existing entries w same 
@@ -155,12 +155,11 @@ for (i in 1:length(manual)){
     }
     if (length(which(confams == spp)) == 1){ # if exactly one match
         data$MDD[which(data$MSW3 == manual[i])] <- fam[which(confams == spp)] # this should be it
-    } else {print[i]} # flag to screen for manual verification
-    print(c(data$MSW3[which(data$MSW3 == manual[i])], fam[which(confams == spp)])) # eyeballing results, looks good-ish
+    } else {print(i)} # flag to screen for manual verification
 }
 
 # consistency test
-length(which(is.na(data$MDD))) == 57 # these should all be species not in the phylogeny
+length(which(is.na(data$MDD))) == 0 # nice
 
 
 # * 2.3.3 Insert splits, remove duplicates (merges) -----------------------
@@ -185,8 +184,25 @@ template$MDD <- "Marmosa_germana" # genus transfer and split
 # merge into data
 data <- rbind(data[1:incumbent,], template, data[(incumbent+1):nrow(data),])
 
-## removing all entries not updated to burgin 2018 - these are redundancies due to merging (>1 species from MSW3 become 1 MDD species)
+## removing all redundancies due to merging (>1 species from MSW3 become 1 MDD species)
+# first deal with Bassaricyon_gabbii alone because its' the only species with more than 2 entries
+AllRecs <- data[which(data$MDD == "Bassaricyon_gabbii"),]       # check that AP is consistent
+data$MDD[which(data$MDD == "Bassaricyon_gabbii")[2:3]] <- NA    # flag and remove redundant entries
 data <- data[-which(is.na(data$MDD)),]
+
+dups <- data$MDD[which(duplicated(data$MDD))]                   # iterate over all spp with >1 entry
+for (merged in dups){                                       
+    AllRecs <- data[which(data$MDD == merged),]                 # take both entries for a species
+    if (length(unique(AllRecs$AP))==1) {                        # if all AP entries are identical
+        data$MDD[which(data$MDD == merged)[2]] <- NA            # flag redundant entries    
+    } else {                                                    # if APs differ
+        data$AP[which(data$MDD == merged)[1]] <- "Cathemeral"   # make one entry "Cathemeral"
+        data$MDD[which(data$MDD == merged)[2]] <- NA            # flag the other
+        print(data[which(data$MDD == merged),])
+    }
+}
+data <- data[-which(is.na(data$MDD)),]      # remove redundant entries
+write.csv(data, file="ActivityData_MDD_v1.1.csv", row.names = FALSE)
 
 
 
@@ -272,7 +288,7 @@ data <- data[-which(is.na(data$MDD)),]
 
 # * 3.3.5 Updating AP following species merges ----------------------------
 # the remaining duplicate records are species that contain merged species with different APs so I made them cathemeral
-data$MDD[which(duplicated(data$MDD))]
+data[which(data$MDD %in% duplicated(data$MDD)),]
 #[1] "Monodelphis_americana"  "Heterogeomys_dariensis"
 
 # first remove excess records
