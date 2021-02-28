@@ -4,7 +4,10 @@ author: "Roi Maor"
 date: "16/02/2021"
 output: html_document
 ---
-
+### Technical note
+#### Files used in the data processing:
+1 - Updating taxonomy.r
+2 - Ch3_MuHiSSE.r
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
@@ -14,6 +17,12 @@ knitr::opts_chunk$set(echo = TRUE)
 #### Taxonomy and phylogeny
 1 - Using the Upham 2019 phylogeny requiers updating to the Burgin 2018 taxonomy
 2 - Species 'lumping' in the new taxonomy caused redundancy (duplicate records for the same recognised species). These records did not agree in two species (Monodelphis americana- diurnal and nocturnal; Heterogeomys dariensis- cathemeral and nocturnal) which were consequently assigned 'cathemeral'.
+
+```{r}
+summary(data$AP)
+summary(data)
+
+```
 
 ### Models
 
