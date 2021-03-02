@@ -17,7 +17,11 @@ knitr::opts_chunk$set(echo = TRUE)
 #### Taxonomy and phylogeny
 1 - Using the Upham 2019 phylogeny requiers updating to the Burgin 2018 taxonomy
 2 - Species 'lumping' in the new taxonomy caused redundancy (duplicate records for the same recognised species). These records did not agree in two species (Monodelphis americana- diurnal and nocturnal; Heterogeomys dariensis- cathemeral and nocturnal) which were consequently assigned 'cathemeral'.
+3 - There is still some mismatch between MDD (all versions) and the phylogeny. 
+3.1 - As a rule, I changed the name in the phylogeny to conform to MDD_v1, unless MDD_v1.31 (the most recent to date) agrees with the phylogeny, in which case the name in the phylogeny remained.
+4 - Surprisingly the phylogeny had more mismatches with MDD names than with MSW3 names in my data, perhaps reflecting that the phylogenetic work was started much sooner (perhaps retaining names from old sequencing studies) than the taxonomic revision
 
+5 - The bottom line: the column "data$Phylo_name" is theone to use for matching data to the phylogeny binomials
 ```{r}
 summary(data$AP)
 summary(data)
