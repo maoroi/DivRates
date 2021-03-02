@@ -20,15 +20,14 @@ require(scales)
 set.seed(88)
 
 # 1. Data preparation -----------------------------------------------------
-# 1.1 Phylogeny (see also 1.4) ------------------------------------------
+# * 1.1 Phylogeny (see also 1.4) ------------------------------------------
 Btree <- read.tree("C:/Users/Roi Maor/Desktop/New Mam Phylo/Completed_5911sp_topoCons_NDexp/MamPhy_BDvr_Completed_5911sp_topoCons_NDexp_v2_tree0000.tre")
 tree <- ladderize(Btree)
 
-tree$tip.label[which(tree$tip.label == "Nesotragus_moschatus")] <- "Neotragus_moschatus"    # typo
 # plot tree for inspection if needed
-pdf(file='tree.pdf', height=40, width=40)
-plot(tree, type='fan', cex=0.15, label.offset = 0.05)
-dev.off()
+#pdf(file='tree.pdf', height=40, width=40)
+#plot(tree, type='fan', cex=0.15, label.offset = 0.05)
+#dev.off()
 
 ## random sample of 250 trees out of 10k from Upham 2019
 indices <- sprintf("%04d", sample(0:9999, 250, replace=FALSE)) # sprintf makes all indices 4-digit long
@@ -38,21 +37,119 @@ indices <- sprintf("%04d", sample(0:9999, 250, replace=FALSE)) # sprintf makes a
 
 
 # * 1.2 Activity data  ----------------------------------------------------
-read.csv("ActivityData_MDD_v1.1.csv") -> data   #species names updated to MDD v1.1
+read.csv("ActivityData_MDD_v1.csv") -> data   # see file "Uploading taxonomy.r" for how this file was made
 
+# making sure names in data and in tree match
+# checks below use the "%in%" syntax becasue setdiff() returns unique entries only, messing up the totals 
+length(which(!data$MDD %in% tree$tip.label)) == 153     # checking names match - they don't
+length(which(!data$MSW3 %in% tree$tip.label)) == 136    # somehow MSW3 has fewer mismatches
+
+
+# * 1.3 Matching names in the data to phylogeny ---------------------------
+# new columns for the names that are actually in the phylogeny, and where they're taken from
+data$Phylo_name <- NA
+data$Phylo_name_note <- NA
+
+# * 1.3.1 Matching binomials in phylogeny to taxonomy ---------------------
+# Species names were updated in the column 'Phylo_name'
+for (i in 1:nrow(data)){ 
+    if (as.character(data$MDD[i]) %in% tree$tip.label){ # if the MDD form is in the tree, it was retained
+        data$Phylo_name[i] <- as.character(data$MDD[i])
+        data$Phylo_name_note[i] <- "MDD_v1.1"
+    } else if (as.character(data$MSW3[i]) %in% tree$tip.label){ # if MDD isn't but the MSW3 form is - MSW3 was retained
+        data$Phylo_name[i] <- as.character(data$MSW3[i])
+        data$Phylo_name_note[i] <- "MSW3"
+    } else {                                            # if neither taxonomies match, manually verified form was inserted (see below)
+        data$Phylo_name[i] <- "_"
+        data$Phylo_name_note[i] <- "_"
+    } 
+}
+
+
+# * 1.3.2 Correcting mismatches manually ----------------------------------
+# it's the safest solution
+
+# find the species for which both MSW3 and MDD are not in the tree
+new_out <- which(!data$MDD %in% tree$tip.label)
+old_out <- which(!data$MSW3 %in% tree$tip.label)
+
+# list species for later checks and consistency
+data$MDD[intersect(new_out, old_out)]
+#[1] "Bubalus_bubalis"           "Neotragus_moschatus"       "Taurotragus_oryx"          "Lycalopex_culpaeus"       
+#[5] "Lycalopex_griseus"         "Lycalopex_gymnocercus"     "Lycalopex_sechurae"        "Lycalopex_vetulus"        
+#[9] "Galerella_pulverulenta"    "Galerella_sanguinea"       "Urva_edwardsii"            "Hydrictis_maculicollis"   
+#[13] "Dermanura_azteca"          "Hypsugo_ariel"             "Marmosa_paraguayana"       "Marmosa_isthmica"         
+#[17] "Marmosa_germana"           "Monodelphis_unistriata"    "Dactylopsila_palpator"     "Elephantulus_revoili"     
+#[21] "Zaglossus_bruijni"         "Equus_asinus"              "Cercopithecus_denti"       "Cercopithecus_wolfi"      
+#[25] "Piliocolobus_badius"       "Piliocolobus_kirkii"       "Piliocolobus_pennantii"    "Piliocolobus_preussi"     
+#[29] "Piliocolobus_rufomitratus" "Paragalago_zanzibaricus"   "Loxodonta_cyclotis"        "Pygeretmus_shitkovi"      
+#[33] "Dephomys_eburneae"         "Grammomys_poensis"         "Micaelamys_namaquensis"    "Tamiops_mcclellandii" 
+
+# corrected names
+{data[which(data$MDD == "Bubalus_bubalis"), c(6,7)] <- c("not in tree", "_")
+    tree$tip.label[which(tree$tip.label == "Nesotragus_moschatus")] <- "Neotragus_moschatus"    # typo
+    data[which(data$MDD == "Neotragus_moschatus"), c(6,7)] <- c("Neotragus_moschatus", "typo")   
+    data[which(data$MDD == "Taurotragus_oryx"), c(6,7)] <- c("Tragelaphus_oryx", "MDD_v1.31")   # genus transfer in v1.31         
+    tree$tip.label[which(tree$tip.label ==  "Pseudalopex_culpaeus")] <- "Lycalopex_culpaeus"    # genus transfer v1
+    data[which(data$MDD == "Lycalopex_culpaeus"), c(6,7)] <- c("Lycalopex_culpaeus", "not MDD_v1") 
+    tree$tip.label[which(tree$tip.label ==  "Pseudalopex_griseus")] <- "Lycalopex_griseus"      # genus transfer v1
+    data[which(data$MDD == "Lycalopex_griseus"), c(6,7)] <- c("Lycalopex_griseus", "not MDD_v1")    
+    tree$tip.label[which(tree$tip.label ==  "Pseudalopex_gymnocercus")] <- "Lycalopex_gymnocercus"  # genus transfer v1
+    data[which(data$MDD == "Lycalopex_gymnocercus"), c(6,7)] <- c("Lycalopex_gymnocercus", "not MDD_v1")  
+    tree$tip.label[which(tree$tip.label ==  "Pseudalopex_gymnocercus")] <- "Lycalopex_sechurae" # genus transfer v1
+    data[which(data$MDD == "Lycalopex_sechurae"), c(6,7)] <- c("Lycalopex_sechurae", "not MDD_v1")   
+    tree$tip.label[which(tree$tip.label ==  "Pseudalopex_vetulus")] <- "Lycalopex_vetulus"      # genus transfer v1
+    data[which(data$MDD == "Lycalopex_vetulus"), c(6,7)] <- c("Lycalopex_vetulus", "not MDD_v1")   
+    data[which(data$MDD == "Galerella_pulverulenta"), c(6,7)] <- c("Herpestes_pulverulentus", "MDD_v1.31")  # genus transfer in v1.31   
+    data[which(data$MDD == "Galerella_sanguinea"), c(6,7)] <- c("Herpestes_sanguineus", "MDD_v1.31")# genus transfer in v1.31
+    tree$tip.label[which(tree$tip.label ==  "Lutra_maculicollis")] <- "Hydrictis_maculicollis"      # genus transfer v1
+    data[which(data$MDD == "Hydrictis_maculicollis"), c(6,7)] <- c("Hydrictis_maculicollis", "not MDD_v1")
+    tree$tip.label[which(tree$tip.label ==  "Monodelphis_unistriatus")] <- "Monodelphis_unistriata" # Latin grammar correction
+    data[which(data$MDD == "Monodelphis_unistriata"), c(6,7)] <- c("Monodelphis_unistriata", "not MDD_v1")   
+    tree$tip.label[which(tree$tip.label ==  "Dactylonax_palpator")] <- "Dactylopsila_palpator"      # genus transfer v1
+    data[which(data$MDD == "Dactylopsila_palpator"), c(6,7)] <- c("Dactylopsila_palpator", "not MDD_v1")   
+    tree$tip.label[which(tree$tip.label == "Elephantulus_revoilii")] <- "Elephantulus_revoili"      # spelling error
+    data[which(data$MDD == "Elephantulus_revoili"), c(6,7)] <- c("Elephantulus_revoili", "typo")   
+    tree$tip.label[which(tree$tip.label == "Zaglossus_bruijnii")] <- "Zaglossus_bruijni"            # spelling error
+    data[which(data$MDD == "Zaglossus_bruijni"), c(6,7)] <- c("Zaglossus_bruijni", "typo")     
+    tree$tip.label[which(tree$tip.label == "Equus_africanus")] <- "Equus_asinus"    # asinus is domestic E. africanus
+    data[which(data$MDD == "Equus_asinus"), c(6,7)] <- c("Equus_asinus", "domestic form")     
+    data[which(data$MDD == "Cercopithecus_denti"), c(6,7)] <- c("not in tree", "split from C.pogonias")                
+    data[which(data$MDD == "Cercopithecus_wolfi"), c(6,7)] <- c("not in tree", "split from C.mitis")
+    tree$tip.label[which(tree$tip.label ==  "Procolobus_badius")] <- "Piliocolobus_badius"      # genus transfer v1
+    data[which(data$MDD == "Piliocolobus_badius"), c(6,7)] <- c("Piliocolobus_badius", " not MDD_v1")   
+    tree$tip.label[which(tree$tip.label ==  "Procolobus_kirkii")] <- "Piliocolobus_kirkii"      # genus transfer v1
+    data[which(data$MDD == "Piliocolobus_kirkii"), c(6,7)] <- c("Piliocolobus_kirkii", "not MDD_v1")   
+    tree$tip.label[which(tree$tip.label == "Procolobus_pennantii")] <- "Piliocolobus_pennantii" # genus transfer v1
+    data[which(data$MDD == "Piliocolobus_pennantii"), c(6,7)] <- c("Piliocolobus_pennantii", "not MDD_v1")   
+    tree$tip.label[which(tree$tip.label == "Procolobus_preussi")] <- "Piliocolobus_preussi"     # genus transfer v1
+    data[which(data$MDD == "Piliocolobus_preussi"), c(6,7)] <- c("Piliocolobus_preussi", "not MDD_v1")   
+    tree$tip.label[which(tree$tip.label == "Procolobus_rufomitratus")] <- "Piliocolobus_rufomitratus"   # genus transfer v1
+    data[which(data$MDD == "Piliocolobus_rufomitratus"), c(6,7)] <- c("Piliocolobus_rufomitratus", "not MDD_v1")   
+    data[which(data$MDD == "Loxodonta_cyclotis"), c(6,7)] <- c("not in tree", "_")
+    tree$tip.label[which(tree$tip.label == "Pygeretmus_zhitkovi")] <- "Pygeretmus_shitkovi"     # correct spelling
+    data[which(data$MDD == "Pygeretmus_shitkovi"), c(6,7)] <- c("Pygeretmus_shitkovi", "spelling")   
+    data[which(data$MDD == "Dephomys_eburneae"), c(6,7)] <- c("not in tree", "_")
+    data[which(data$MDD == "Grammomys_poensis"), c(6,7)] <- c("not in tree", "_")
+    tree$tip.label[which(tree$tip.label == "Aethomys_namaquensis")] <- "Micaelamys_namaquensis" # genus transfer v1
+    data[which(data$MDD == "Micaelamys_namaquensis"), c(6,7)] <- c("Micaelamys_namaquensis", "not MDD_v1")   
+    tree$tip.label[which(tree$tip.label == "Tamiops_macclellandii")] <- "Tamiops_mcclellandii"  # typo
+    data[which(data$MDD == "Tamiops_mcclellandii"), c(6,7)] <- c("Tamiops_mcclellandii", "typo")}
+# write to file just in case (this wont help to skip the matching step, because some tip names have to be 
+# change in the phylogeny, which would be repeated for evert tree variant uploaded) 
+write.csv(data, file="ActivityData_MDD_v1_match.csv", row.names = FALSE)
+
+
+# * 1.4 Final data processing steps ---------------------------------------
 # remove crepusculars
-length(which(data$AP == 'Crepuscular')) == 24
-dat3 <- data[-which(data$AP == 'Crepuscular'),]
+act <- data
+length(which(act$AP == 'Crepuscular')) == 24
+act3 <- act[-which(act$AP == 'Crepuscular'),]
 
-# remove 402 species not in phylogeny
-length(setdiff(dat3$MDD, tree$tip.label)) == 152
-length(which(!dat3$MSW3 %in% tree$tip.label)) == 141     # .. and double checking
-act <- dat3[-which(!dat3$MSW3 %in% tree$tip.label),]
-
-act$Diel.activity.pattern <- as.character(act$Diel.activity.pattern)
-act$Diel.activity.pattern[act$Diel.activity.pattern == 'Nocturnal'] <- 1
-act$Diel.activity.pattern[act$Diel.activity.pattern == 'Cathemeral'] <- 2
-act$Diel.activity.pattern[act$Diel.activity.pattern == 'Diurnal'] <- 3
+act3$AP <- as.character(act3$AP)
+act3$AP[act3$AP == 'Nocturnal'] <- 1
+act3$AP[act3$AP == 'Cathemeral'] <- 2
+act3$AP[act3$AP == 'Diurnal'] <- 3
 
 
 # * 1.4 Prepare MCC tree ------------------------------------------------
