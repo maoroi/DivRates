@@ -20,13 +20,37 @@ require(scales)
 set.seed(88)
 
 # 1. Data preparation -----------------------------------------------------
-# * 1.1 Phylogeny (see also 1.4) ------------------------------------------
-Btree <- read.tree("C:/Users/Roi Maor/Desktop/New Mam Phylo/Completed_5911sp_topoCons_NDexp/MamPhy_BDvr_Completed_5911sp_topoCons_NDexp_v2_tree0000.tre")
-tree <- ladderize(Btree)
+# * 1.1 Function to iron out phylogeny ------------------------------------
+# the Upham 2019 trees aren't precisely ultrametric, so I used code from Liam Revell: 
+# http://blog.phytools.org/2017/03/forceultrametric-method-for-ultrametric.html
+force.ultrametric <- function(tree,method=c("nnls","extend")){
+    method<-method[1]
+    if(method=="nnls") tree <- nnls.tree(cophenetic(tree),tree, rooted=TRUE,trace=0)
+    else if(method=="extend"){
+        h<-diag(vcv(tree))
+        d<-max(h)-h
+        ii<-sapply(1:Ntip(tree),function(x,y) which(y==x),
+                   y=tree$edge[,2])
+        tree$edge.length[ii]<-tree$edge.length[ii]+d
+    } else 
+        cat("method not recognized: returning input tree\n\n")
+    tree
+}
+
+# * 1.2 Phylogenetic data (see also 1.4) ------------------------------------------
+phy1 <- read.tree("C:/Users/Roi Maor/Desktop/New Mam Phylo/Completed_5911sp_topoCons_NDexp/MamPhy_BDvr_Completed_5911sp_topoCons_NDexp_v2_tree0000.tre")
+phy1 <- ladderize(phy1)
+
+# force ultrametric
+is.ultrametric(phy1)
+tree <- force.ultrametric(phy1, "nnls")
+is.ultrametric(phy1)
+#write.tree(phy1, file='tree????.nex')
+
 
 # plot tree for inspection if needed
 #pdf(file='tree.pdf', height=40, width=40)
-#plot(tree, type='fan', cex=0.15, label.offset = 0.05)
+#plot(phy1, type='fan', cex=0.15, label.offset = 0.05)
 #dev.off()
 
 ## random sample of 250 trees out of 10k from Upham 2019
@@ -55,11 +79,11 @@ data$Phylo_name_note <- NA
 for (i in 1:nrow(data)){ 
     if (as.character(data$MDD[i]) %in% tree$tip.label){ # if the MDD form is in the tree, it was retained
         data$Phylo_name[i] <- as.character(data$MDD[i])
-        data$Phylo_name_note[i] <- "MDD_v1.1"
+        data$Phylo_name_note[i] <- "MDD_v1"
     } else if (as.character(data$MSW3[i]) %in% tree$tip.label){ # if MDD isn't but the MSW3 form is - MSW3 was retained
         data$Phylo_name[i] <- as.character(data$MSW3[i])
         data$Phylo_name_note[i] <- "MSW3"
-    } else {                                            # if neither taxonomies match, manually verified form was inserted (see below)
+    } else {                # if neither taxonomies match, manually verified form was inserted (see below)
         data$Phylo_name[i] <- "_"
         data$Phylo_name_note[i] <- "_"
     } 
@@ -135,6 +159,11 @@ data$MDD[intersect(new_out, old_out)]
     data[which(data$MDD == "Micaelamys_namaquensis"), c(6,7)] <- c("Micaelamys_namaquensis", "not MDD_v1")   
     tree$tip.label[which(tree$tip.label == "Tamiops_macclellandii")] <- "Tamiops_mcclellandii"  # typo
     data[which(data$MDD == "Tamiops_mcclellandii"), c(6,7)] <- c("Tamiops_mcclellandii", "typo")}
+
+# verify all names are matched
+length(which(tree$tip.label %in% data$Phylo_name)) == 2424
+length(which(data$Phylo_name %in% tree$tip.label)) == 2424
+
 # write to file just in case (this wont help to skip the matching step, because some tip names have to be 
 # change in the phylogeny, which would be repeated for evert tree variant uploaded) 
 write.csv(data, file="ActivityData_MDD_v1_match.csv", row.names = FALSE)
@@ -146,86 +175,69 @@ act <- data
 length(which(act$AP == 'Crepuscular')) == 24
 act3 <- act[-which(act$AP == 'Crepuscular'),]
 
+# convert to numbers 
 act3$AP <- as.character(act3$AP)
 act3$AP[act3$AP == 'Nocturnal'] <- 1
 act3$AP[act3$AP == 'Cathemeral'] <- 2
 act3$AP[act3$AP == 'Diurnal'] <- 3
 
-
-# * 1.4 Prepare MCC tree ------------------------------------------------
-# the MCC tree is not precisely ultrametric, so I use code from Liam Revell's phytools blog: 
-# http://blog.phytools.org/2017/03/forceultrametric-method-for-ultrametric.html
-force.ultrametric <- function(tree,method=c("nnls","extend")){
-    method<-method[1]
-    if(method=="nnls") tree <- nnls.tree(cophenetic(tree),tree, rooted=TRUE,trace=0)
-    else if(method=="extend"){
-        h<-diag(vcv(tree))
-        d<-max(h)-h
-        ii<-sapply(1:Ntip(tree),function(x,y) which(y==x),
-                   y=tree$edge[,2])
-        tree$edge.length[ii]<-tree$edge.length[ii]+d
-    } else 
-        cat("method not recognized: returning input tree\n\n")
-    tree
-}
-
-is.ultrametric(MCCtree)
-MCCphy <- force.ultrametric(MCCtree, "nnls")
-is.ultrametric(MCCphy)
-#write.tree(MCCphy, file='MCCphy.nex')
-
-MCCphy <- drop.tip(MCCphy, MCCphy$tip.label[which(!MCCphy$tip.label %in% act$MSW3)])
+# keep only species that have activity AND phylogentic data
+act3 <- act3[which(act3$Phylo_name %in% tree$tip.label),]
+tree <- drop.tip(tree, which(!tree$tip.label %in% act3$Phylo_name))
 
 
+# 2. Analysis -------------------------------------------------------------
 
-# * 999 Sampling fraction -----------------------------------------------------
-## calculate proportions of AP in sampled species accounting for *KNOWN* biases (incl. species not 
-## in the phylogeny) given the updated taxonomy and assuming unbiased sampling for all other species. 
-## The below section is written this way in case I need to make assumptions about AP of missing species.
+
+# * 2.1 Estimating sampling fraction  -------------------------------------
+
+#  * 2.1.1 Proportion sampled out of all mammals --------------------------
+## Proportion of sampled out of extant species by AP, assuming unbiased sampling. 
 
 # total count in the entire dataset (inc species not in Faurby 2015 phylogeny)
-TotN <- length(which(data$Diel.activity.pattern == 'Nocturnal'))
-TotC <- length(which(data$Diel.activity.pattern == 'Cathemeral'))
-TotD <- length(which(data$Diel.activity.pattern == 'Diurnal'))
+TotN <- length(which(data$AP == 'Nocturnal'))
+TotC <- length(which(data$AP == 'Cathemeral'))
+TotD <- length(which(data$AP == 'Diurnal'))
 # proportions in data
-datN <- TotN / (TotN+TotC+TotD)
-datC <- TotC / (TotN+TotC+TotD)
-datD <- TotD / (TotN+TotC+TotD)
+datN <- TotN / nrow(data)
+datC <- TotC / nrow(data)
+datD <- TotD / nrow(data)
 
-## ** assumptions **
-# nocturnal bats (n=1162)
-Nunsamp <- length(which(tax$Order == 'CHIROPTERA')) - length(which(data$Order == 'Chiroptera')) - 6  # unsampled bats minus 6 extinct spp
 
-# diurnal squirrels (n=113)
-SQRLS <- length(which(tax$Family == 'SCIURIDAE'))                       # all sciurids (all extant)
+# * 2.1.2 Assumptions -----------------------------------------------------
+# unsampled nocturnal bats (n = 1096)
+bats_unsamp <- length(which(tax$Order == 'CHIROPTERA')) - length(which(data$Order == 'Chiroptera')) - 6  # unsampled bats minus 6 extinct spp
+
+# unsampled squirrels (27 noct flying squirrels; 87 diur sciurids)
+SQRLS <- tax[which(tax$Family == 'SCIURIDAE'),]                         # all sciurids (all extant)
 SQRLS_DATA <- data[which(data$Family == 'Sciuridae'),]                  # sampled sciurids 
-length(which(TAX$Tribe == 'PTEROMYINI')) == 57                          # all flying squirrels (nocturnal)
-length(which(SQRLS_DATA$Diel.activity.pattern == "Nocturnal")) == 31    # flying squirels in data
-FLY_SQRLS_unsamp <- 57-31
+flying <- length(which(SQRLS$Tribe == 'PTEROMYINI'))                    # 57 flying squirrels in MDD
+noct_sqrls <- length(which(SQRLS_DATA$AP == "Nocturnal"))               # flying squirels are the only nocturnal sciurids
+FLY_SQRLS_unsamp <- flying - noct_sqrls
+Diur_sqrls_unsamp <- nrow(SQRLS) - nrow(SQRLS_DATA) - FLY_SQRLS_unsamp  # unsampled scuirids minus unsampled noct sciurids
 
-Dunsamp <- SQRLS - nrow(SQRLS_DATA) - FLY_SQRLS_unsamp                  # unsampled scuirids minus unsampled noct sciurids
-Nunsamp <- Nunsamp + FLY_SQRLS_unsamp
+# diurnal Simiiformes (n = 148, excl. Aotus) 
+PRIMS <- tax[which(tax$Order == "PRIMATES"),]
+PRIMS <- PRIMS[which(PRIMS$extinct. == 0),]                             # only extant species
+simians <- c("Atelidae", "Cebidae", "Cercopithecidae", "Pitheciidae", "Hominidae", "Hylobatidae")
+simian_count <- length(which(PRIMS$Family %in% toupper(simians)))       # all simians recognised in MDD
+SIMIAN_DATA <- data[which(data$Family %in% c(simians, "Aotidae")),]     # Aotidae demoted into Cebidae (Aotinae) in MDD but data$Family relates to MSW3   
+length(which(tax$Subfamily == "AOTINAE")) == 11                         # 11 species in MDD (no assumption of AP of unknown spp)
+length(which(data$Family == 'Aotidae')) == 7                            # night monkeys in data 
+simi_unsamp <- simian_count - nrow(SIMIAN_DATA) - (11-7)                # unsmapled (diur) simians minus unsampled (noct) Aotinae
 
-# diurnal Haplorhini (n=146) 
-Dprims <- c("Atelidae", "Cebidae", "Cercopithecidae", "Pitheciidae", "Hominidae", "Hylobatidae") # Simian families
-TAX[which(TAX$Family %in% toupper(Dprims)),] -> primD                   # all Simiiformes INCL. AOTIDAE
-length(which(primD$extinct. == 0)) == 359                               # only extant species
-SIMIAN_DATA <- data[which(data$Family %in% c(Dprims, 'Aotidae')),]      # Aotidae demoted into Cebidae (Aotinae) in Burgin 2018 but data$Family relates to MSW3   
-length(which(TAX$Genus == 'Aotus')) == 11                               # 11 night monkies (not all nocturnal so no assumption made)
-length(which(data$Family == 'Aotidae')) == 8                            # night monkeys in data
-# unsampled nocturnal primates (all extant)
-length(which(TAX$Family == "LORISIDAE")) - length(which(data$Family == "Lorisidae")) == 8
-length(which(TAX$Family == "TARSIIDAE")) - length(which(data$Family == "Tarsiidae")) == 8
-length(which(TAX$Family == "GALAGIDAE")) - length(which(data$Family == "Galagidae")) == 9
-length(which(TAX$Family == "CHEIROGALEIDAE")) - length(which(data$Family == "Cheirogaleidae")) == 26
-Nprims <- 8+8+9+26
-
-Dunsamp <- Dunsamp + 359 - nrow(SIMIAN_DATA) - (11-8)
-Nunsamp <- Nunsamp + Nprims
+# total unsampled (N=1123, D=235)
+Nunsamp <- bats_unsamp + FLY_SQRLS_unsamp
+Dunsamp <- Diur_sqrls_unsamp + simi_unsamp
+rm(bats_unsamp, FLY_SQRLS_unsamp, Diur_sqrls_unsamp, simi_unsamp, PRIMS, simians, 
+   simian_count, SIMIAN_DATA, noct_sqrls, flying, SQRLS_DATA, SQRLS)
 ##      ** end assumptions **       ##
 
+
+# * 2.1.3 Estimate sampling fraction --------------------------------------
 # species with no data or assumptions
-unkn <- 6399-(nrow(data)+Nunsamp+Dunsamp)  # total number of extant species taken from Burgin 2018 abstract
+all_extant <- length(unique(tax$SciName[which(tax$extinct. == 0)]))
+unkn <- all_extant - (nrow(data) + Nunsamp + Dunsamp)                   # total number of extant species based on MDD v1
 # expected species out of unknown if same proportion as in the data
 expN <- datN * unkn
 expC <- datC * unkn
@@ -236,6 +248,32 @@ Cprop <- TotC / (TotC + expC)
 Dprop <- TotD / (TotD + Dunsamp + expD)
 
 freq <- c(Nprop, Cprop, Dprop)
+
+# check that proportions were retained so that nocturnal, cathemeral, and diurnal species account for ~99% of mammals
+AP_data <- length(which(data$AP %in% c("Nocturnal", "Cathemeral", "Diurnal"))) / nrow(data)
+AP_extrapol <- ((TotN + Nunsamp + expN) + (TotC + expC) + (TotD + Dunsamp + expD)) / all_extant
+round(AP_data, 2) == round(AP_extrapol, 2)
+
+
+#states <- as.numeric(act3$AP)
+#names(states) <- act3$Phylo_name
+
+# * 2.2 Setting up the analysis following steps from MuHiSSE tutor --------
+
+for (i in 1:length(tree$tip.label)){
+    tree$tip.state[i] <- as.numeric(act3$AP[which(act3$Phylo_name == tree$tip.label[i])])
+}
+
+states <- data.frame(tree$tip.state, tree$tip.state, row.names=names(tree$tip.state))
+states <- states[tree$tip.label,]
+#
+#
+#
+#
+#
+#
+# * 999 Sampling fraction -----------------------------------------------------
+
 
 
 
@@ -302,9 +340,9 @@ muhisse.constrained <- hisse:::DownPassMuHisse(dat.tab, gen=gen, cache=cache, ro
 comparison <- identical(round(muhisse.constrained,4), round(diversitree.constrained,4))
 print(comparison)
 
-##################################################################################################################
-### enough demonstrations, below is the part that was actually done:
-##################################################################################################################
+# ------------------------------------------------------------------ #
+# enough demonstrations, below is the part that was actually done:   #
+# ------------------------------------------------------------------ #
 
 ## load data (taken as is from "MuSSE MCC tree ALL.R")
 newdata <- read.csv('EvolRatesData.csv')
