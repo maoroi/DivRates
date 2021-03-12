@@ -12,7 +12,7 @@ data <- DATA
 
 
 #  2. Updating to MDD -----------------------------------------------------
-#tax_v1 <- read.csv("C:/Users/Roi Maor/Desktop/New Mam Phylo/Burgin taxonomy/MDD_v1_6495species_JMamm.csv", header = TRUE)
+tax <- read.csv("C:/Users/Roi Maor/Desktop/New Mam Phylo/Burgin taxonomy/MDD_v1_6495species_JMamm.csv", header = TRUE)
 #tax_v1.1 <- read.csv("C:/Users/Roi Maor/Desktop/New Mam Phylo/Burgin taxonomy/MamTax2018_v1.1.csv", header = TRUE)
 #tax_v1.31 <- read.csv("C:/Users/Roi Maor/Desktop/New Mam Phylo/Burgin taxonomy/MDD_v1.31_6513species.csv") # taxonomy from Mammal Diversity Database [https://www.mammaldiversity.org/], last accessed 23/02/21
 
@@ -197,8 +197,7 @@ template$MDD <- "Marmosa_germana" # genus transfer and split
 # merge into data
 data <- rbind(data[1:incumbent,], template, data[(incumbent+1):nrow(data),])
 
-# I THINK THIS SHOULD BE WHERE THE BIG LOOP ENDS BECAUSE THE FOLLOWING SECTION MAY DIFFER BY TAXONOMY ##
-########        ########        ########        ########        ########        ########        ########
+# ** HERE SHOULD BE WHERE THE BIG LOOP ENDS BECAUSE THE FOLLOWING SECTION MAY DIFFER BY TAXONOMY ** 
 
 # * 2.3.4 Updating AP following species merges ----------------------------
 # removing all redundancies due to merging (>1 species from MSW3 become 1 MDD species)
