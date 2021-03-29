@@ -119,7 +119,7 @@ act$Diel.activity.pattern[act$Diel.activity.pattern == 'Cathemeral'] <- 2
 act$Diel.activity.pattern[act$Diel.activity.pattern == 'Diurnal'] <- 3
 
 # * 1.4 Iron out phylogeny ------------------------------------------------
-# the MCC tree is not precisely ultrametric, so I use code from Liam Revell's phytools blog: 
+# the MCC tree is not precisely ultrametric, so I use this function from Liam Revell's phytools blog: 
 # http://blog.phytools.org/2017/03/forceultrametric-method-for-ultrametric.html
 force.ultrametric <- function(tree,method=c("nnls","extend")){
     method<-method[1]

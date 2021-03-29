@@ -20,8 +20,8 @@ require(scales)
 set.seed(88)
 
 # 1. Data preparation -----------------------------------------------------
-# * 1.1 Function to iron out phylogeny ------------------------------------
-# the Upham 2019 trees aren't precisely ultrametric, so I used code from Liam Revell: 
+# * 1.1 Functions to iron out phylogeny -----------------------------------
+# the Upham 2019 trees aren't precisely ultrametric, so I used this function from Liam Revell: 
 # http://blog.phytools.org/2017/03/forceultrametric-method-for-ultrametric.html
 force.ultrametric <- function(tree,method=c("nnls","extend")){
     method<-method[1]
@@ -37,6 +37,31 @@ force.ultrametric <- function(tree,method=c("nnls","extend")){
     tree
 }
 
+# automatically correct tip names to match taxonomy - requires the data file loaded (based on section 1.4 below)
+CorTax <- function(tree){
+    tree$tip.label[which(tree$tip.label == "Equus_africanus")]  <- "Equus_asinus"   # asinus is domestic E. africanus
+    tree$tip.label[which(tree$tip.label == "Pygeretmus_zhitkovi")]  <- "Pygeretmus_shitkovi"    # correct spelling
+    tree$tip.label[which(tree$tip.label == "Aethomys_namaquensis")] <- "Micaelamys_namaquensis" # genus transfer v1
+    tree$tip.label[which(tree$tip.label == "Tamiops_macclellandii")]<- "Tamiops_mcclellandii"   # typo
+    tree$tip.label[which(tree$tip.label == "Nesotragus_moschatus")] <- "Neotragus_moschatus"    # typo
+    tree$tip.label[which(tree$tip.label == "Pseudalopex_culpaeus")] <- "Lycalopex_culpaeus"     # genus transfer v1
+    tree$tip.label[which(tree$tip.label == "Pseudalopex_griseus")]  <- "Lycalopex_griseus"      # genus transfer v1
+    tree$tip.label[which(tree$tip.label == "Pseudalopex_gymnocercus")]  <- "Lycalopex_gymnocercus"  # genus transfer v1
+    tree$tip.label[which(tree$tip.label == "Pseudalopex_gymnocercus")]  <- "Lycalopex_sechurae" # genus transfer v1
+    tree$tip.label[which(tree$tip.label == "Pseudalopex_vetulus")]  <- "Lycalopex_vetulus"      # genus transfer v1
+    tree$tip.label[which(tree$tip.label == "Lutra_maculicollis")]   <- "Hydrictis_maculicollis" # genus transfer v1
+    tree$tip.label[which(tree$tip.label == "Monodelphis_unistriatus")]  <- "Monodelphis_unistriata" # Latin grammar correction
+    tree$tip.label[which(tree$tip.label == "Dactylonax_palpator")]  <- "Dactylopsila_palpator"  # genus transfer v1
+    tree$tip.label[which(tree$tip.label == "Elephantulus_revoilii")]<- "Elephantulus_revoili"   # spelling error
+    tree$tip.label[which(tree$tip.label == "Zaglossus_bruijnii")]   <- "Zaglossus_bruijni"      # spelling error
+    tree$tip.label[which(tree$tip.label == "Procolobus_badius")]    <- "Piliocolobus_badius"    # genus transfer v1
+    tree$tip.label[which(tree$tip.label == "Procolobus_kirkii")]    <- "Piliocolobus_kirkii"    # genus transfer v1
+    tree$tip.label[which(tree$tip.label == "Procolobus_preussi")]   <- "Piliocolobus_preussi"   # genus transfer v1
+    tree$tip.label[which(tree$tip.label == "Procolobus_pennantii")] <- "Piliocolobus_pennantii" # genus transfer v1
+    tree$tip.label[which(tree$tip.label == "Procolobus_rufomitratus")]  <- "Piliocolobus_rufomitratus"   # genus transfer v1
+    tree <- drop.tip(tree, which(!tree$tip.label %in% act3$Phylo_name))
+}
+
 # * 1.2 Phylogenetic data (see also 1.4) ------------------------------------------
 phy1 <- read.tree("C:/Users/Roi Maor/Desktop/New Mam Phylo/Completed_5911sp_topoCons_NDexp/MamPhy_BDvr_Completed_5911sp_topoCons_NDexp_v2_tree0000.tre")
 tree <- ladderize(phy1)
@@ -47,7 +72,16 @@ tree <- ladderize(phy1)
 #dev.off()
 
 ## random sample of 250 trees out of 10k from Upham 2019
-indices <- sprintf("%04d", sample(0:9999, 250, replace=FALSE)) # sprintf makes all indices 4-digit long
+indices <- sprintf("%04d", sample(0:9999, 250, replace=FALSE)) # sprintf makes all samples indices 4-digit long
+# trim tree variants to 2400 data species and save to speed up processing
+system.time(
+for (i in 1:length(indices)){
+    phyfile <- paste0("C:/Users/Roi Maor/Desktop/New Mam Phylo/Completed_5911sp_topoCons_NDexp/MamPhy_BDvr_Completed_5911sp_topoCons_NDexp_v2_tree",indices[i],".tre")
+    treevar <- read.tree(phyfile)
+    treevar <- CorTax(treevar)
+    write.tree(treevar, file=paste0('treevar',indices[i],'.nex'))
+})
+
 
 #clades <- prop.part(tree)
 #MCCtree <- maxCladeCred(tree, part = clades)
@@ -317,7 +351,18 @@ dull.null <- MuHiSSE(phy=tree, data=states.trans, f=f, turnover=turnover,
                      trans.rate=trans.rate.mod)
 
 
-
+# CID-8  (differential transitions among hidden states)
+n <- 8                  # automating model specifications as function of hidden states
+set_to_0 <- 4*(1:n)-1
+turnover <- c(rep(1,4), rep(2,4), rep(3,4), rep(4,4), rep(5,4), rep(6,4), rep(7,4), rep(8,4))
+extinction.fraction <- rep(1,4*n) 
+turnover[set_to_0] <- extinction.fraction[set_to_0] <- 0
+trans.rate <- TransMatMakerMuHiSSE(hidden.traits=n-1, include.diagonals = FALSE, cat.trans.vary = TRUE)
+trans.rate.mod <- ParDrop(trans.rate, c(2,5,6,8, 10,13,14,16, 18,21,22,24, 26,29,30,32, 
+                                        34,37,38,40, 42,45,46,48, 50,53,54,56, 58,61,62,64))   
+trans.rate.mod[,set_to_0] = trans.rate.mod[set_to_0,] <- 0
+MuHiSSE <- MuHiSSE(phy=tree, data=states.trans, f=f, turnover=turnover, eps=extinction.fraction, 
+                   hidden.states=TRUE, trans.rate=trans.rate.mod)
 # ------------------------------------------------------------------ #
 # enough demonstrations, below is the part that was actually done:   #
 # ------------------------------------------------------------------ #

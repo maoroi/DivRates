@@ -44,12 +44,18 @@ Each hidden state set (i.e. all states of A, or all states of B etc.) represents
 For example, my focal trait is AP, so trait dependent diversification will not capture diversification increases due to flying habits (bats), gulp feeding (whales), granivory (rodents) etc., but all these cannot be reliably model by a single hidden state, and will require multiple hidden states. 
 
 2 - 
-Use BOTH the MCC tree (based on ALL posterioir trees) AND a range of trees (individually) from the posterior
+Use BOTH the MCC tree (based on ALL posterior trees) AND a range of trees (individually) from the posterior
 
 3 - 
 There should not be more hidden rates than there are hidden states! (see my comment on Nakov 2019, p. 2500)
 
 4 - 
+I don't think there should be equal transition rates AMONG hidden states, because symmetrical backward-forward transitions make little sense in a trait that affects diversification 
+
+5 - 
+All hidden rates different (i.e. 6  transition rates between every 2 hidden states) makes no sense because it means that hidden rates vary depending on observed state (=oxymoron) (e.g. if 1A -> 1B != 2A -> 2B)
+
+6 - 
 Meseguer et al. 2020, J Biogeog:
 
 "To account for rate variation, we compared models where diversification rates were allowed to change at 
