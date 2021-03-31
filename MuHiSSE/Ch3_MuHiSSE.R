@@ -11,6 +11,9 @@ library(diversitree)
 require(phytools)
 #> packageVersion('phytools')
 #[1] ‘0.6.99’
+library(phangorn)
+#> packageVersion('phangorn')
+#[1] ‘2.5.5’
 require(scales)
 #> packageVersion('scales')
 #[1] ‘1.0.0’
@@ -72,19 +75,18 @@ tree <- ladderize(phy1)
 #dev.off()
 
 ## random sample of 250 trees out of 10k from Upham 2019
-indices <- sprintf("%04d", sample(0:9999, 250, replace=FALSE)) # sprintf makes all samples indices 4-digit long
-# trim tree variants to 2400 data species and save to speed up processing
-system.time(
+indices <- sprintf("%04d", sample(0:9999, 5000, replace=FALSE)) # sprintf makes all samples indices 4-digit long
+
 for (i in 1:length(indices)){
     phyfile <- paste0("C:/Users/Roi Maor/Desktop/New Mam Phylo/Completed_5911sp_topoCons_NDexp/MamPhy_BDvr_Completed_5911sp_topoCons_NDexp_v2_tree",indices[i],".tre")
     treevar <- read.tree(phyfile)
     treevar <- CorTax(treevar)
-    write.tree(treevar, file=paste0('treevar',indices[i],'.nex'))
-})
-
-
-#clades <- prop.part(tree)
-#MCCtree <- maxCladeCred(tree, part = clades)
+    #write.tree(treevar, file=paste0('treevar',indices[i],'.nex'))
+    if (i == 1) {trees <- treevar} else {trees <- ape:::c.phylo(trees, treevar)} # group trees to one object
+}
+# MCC tree made of 5000 variants
+clades <- prop.part(trees)
+MCCtree <- maxCladeCred(trees, part = clades)
 
 
 # * 1.3 Activity data  ----------------------------------------------------
@@ -218,11 +220,11 @@ tree <- drop.tip(tree, which(!tree$tip.label %in% act3$Phylo_name))
 is.ultrametric(tree)
 tree <- force.ultrametric(tree, "nnls")
 is.ultrametric(tree)
-#write.tree(tree, file='Ultree0000.nex')
+#write.tree(tree, file='UltMCC.nex')
 
 
 # * 1.6 Transforming to binary data (optional) ----------------------------
-
+### THIS COULD ALSO BE DONE BY SETTING PARAMETER IDENTITIES IN THE MODELS
 #  * 1.6.1 Any daytime activity (N <-> CD dichotomy) ----------------------
 
 
@@ -247,7 +249,7 @@ for (i in 1:nrow(dat)){
 #  * 2.1.1 Proportion sampled out of all mammals --------------------------
 ## Proportion of sampled out of extant species by AP, assuming unbiased sampling. 
 
-# total count in the entire dataset (inc species not in Faurby 2015 phylogeny)
+# total count in the entire dataset (inc species not in the phylogeny)
 TotN <- length(which(data$AP == 'Nocturnal'))
 TotC <- length(which(data$AP == 'Cathemeral'))
 TotD <- length(which(data$AP == 'Diurnal'))
