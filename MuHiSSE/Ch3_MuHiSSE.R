@@ -342,9 +342,10 @@ for(i in 1:Ntip(tree)){
 # states. But first let’s set up the “dull null” – i.e., turnover and extinction fraction are the same for all observed
 # state combinations. Note the “f” represents the sampling fraction for each observed state combination, which
 # is a vector ordered in the same manner as for turnover and extinction fraction vectors:
+f = c(freq[1], freq[2], 0, freq[3])
+
 turnover <- c(1,1,0,1)
 extinction.fraction <- c(1,1,0,1)
-f = c(freq[1], freq[2], 0, freq[3])
 trans.rate <- TransMatMakerMuHiSSE(hidden.traits=0)
 trans.rate.mod <- ParDrop(trans.rate, c(2,5,6,8))
 #Now, we can call MuHiSSE and estimate the parameters under this model using the default settings:
@@ -354,17 +355,40 @@ dull.null <- MuHiSSE(phy=tree, data=states.trans, f=f, turnover=turnover,
 
 
 # CID-8  (differential transitions among hidden states)
-n <- 8                  # automating model specifications as function of hidden states
+# *automating model specifications as function of hidden states*
+n <- 8                  
 set_to_0 <- 4*(1:n)-1
-turnover <- c(rep(1,4), rep(2,4), rep(3,4), rep(4,4), rep(5,4), rep(6,4), rep(7,4), rep(8,4))
+if (n < 9) {   # For models w >8 hidden states, transition matrix has to be coded manually to bypass TransMatMakerMuHiSSE() limitations
+    drops <- c(2,5,6,8, 10,13,14,16, 18,21,22,24, 26,29,30,32, 34,37,38,40, 42,45,46,48, 50,53,54,56, 58,61,62,64)
+} else {drops <- NA}
+
+# div rates formulae
+for (z in 1:n) {reps <- rep(z, 4)
+    if (z == 1) {turnover <- reps} else {turnover <- c(turnover, reps)}}
 extinction.fraction <- rep(1,4*n) 
 turnover[set_to_0] <- extinction.fraction[set_to_0] <- 0
+# trans rates formulae
 trans.rate <- TransMatMakerMuHiSSE(hidden.traits=n-1, include.diagonals = FALSE, cat.trans.vary = TRUE)
-trans.rate.mod <- ParDrop(trans.rate, c(2,5,6,8, 10,13,14,16, 18,21,22,24, 26,29,30,32, 
-                                        34,37,38,40, 42,45,46,48, 50,53,54,56, 58,61,62,64))   
+trans.rate.mod <- ParDrop(trans.rate, drops[1:(4*n)])   
 trans.rate.mod[,set_to_0] = trans.rate.mod[set_to_0,] <- 0
+
+# optional: identical transition rates across hidden states
+EqTransAcrossHiddenStates <- function(rateMatrix, n_HiddenStates) {
+    lows <- 4*(1:(n_HiddenStates-1))+1
+    highs <- 4*(2:n_HiddenStates)
+    for (z in 1:(n_HiddenStates-1)) {
+        l <- lows[z]
+        h <- highs[z]
+        rateMatrix[l:h,l:h] <- rateMatrix[1:4,1:4]}
+    rateMatrix <- ParDrop(rateMatrix, c(0)) # update parameter indices (the indices are just names so this makes no difference to the model, just easier to read)
+}
+trans.rate.modmod <- EqTransAcrossHiddenStates(trans.rate.mod, n) # identical transition rates across hidden states
+
+# model 
 MuHiSSE <- MuHiSSE(phy=tree, data=states.trans, f=f, turnover=turnover, eps=extinction.fraction, 
                    hidden.states=TRUE, trans.rate=trans.rate.mod)
+
+
 # ------------------------------------------------------------------ #
 # enough demonstrations, below is the part that was actually done:   #
 # ------------------------------------------------------------------ #
@@ -401,7 +425,6 @@ print(trans.rate)
 ## Oredered model: use the ParDrop() to remove transitions to and from the fourth state in the model:
 trans.rate.mod <- ParDrop(trans.rate, c(2,5,6,8))
 print(trans.rate.mod)
-
 ## From there the function call is all the same:
 MuHiSSE <- MuHiSSE(phy=tree, data=states, f=f, turnover=turnover, eps=extinction.fraction, 
                    hidden.states=FALSE, trans.rate=trans.rate.mod)
@@ -412,7 +435,6 @@ extinction.fraction <- c(1,1,1,0, 1,1,1,0)
 f = c(0.6742257, 0.3854165, 0.5727366, 0.0000000)
 trans.rate <- TransMatMakerMuHiSSE(hidden.traits=1)
 trans.rate.mod <- ParDrop(trans.rate, c(4,6,7,8,12,14,15,16))
-
 ## run analysis
 MuHiSSE1 <- MuHiSSE(phy=datatree, data=states, f=f, turnover=turnover, eps=extinction.fraction, hidden.states=TRUE,
                     trans.rate=trans.rate.mod)

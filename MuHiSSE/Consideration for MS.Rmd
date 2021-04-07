@@ -1,7 +1,7 @@
 ---
 title: "DivRatesMS"
 author: "Roi Maor"
-date: "16/02/2021"
+date: "16/04/2021"
 output: html_document
 ---
 ### Technical note
@@ -22,13 +22,16 @@ knitr::opts_chunk$set(echo = TRUE)
 4 - Surprisingly the phylogeny had more mismatches with MDD names than with MSW3 names in my data, perhaps reflecting that the phylogenetic work was started much sooner (perhaps retaining names from old sequencing studies) than the taxonomic revision
 
 5 - The bottom line: the column "data$Phylo_name" is theone to use for matching data to the phylogeny binomials
-```{r}
-summary(data$AP)
-summary(data)
-
-```
 
 ### Models
+#### _MuSSE_
+#### _MuHiSSE_
+#### _CID_
+#### _Order-wise analyses_
+like in the previous version
+
+#### ?? _binary analyses_ 
+disabling differences btw C and D, or between C and N, to asses if the mechanism is "any daytime activity beneficial" or "only strict diurnality truly advantageous"
 
 CID, diversification increased due to KPg : BiSSE.td (MuSSE.td?)
 
@@ -38,7 +41,8 @@ CID, diversification increased due to KPg : BiSSE.td (MuSSE.td?)
 
 ------
 
-* METHODS considerations
+### **METHODS considerations**
+
 1 - 
 Each hidden state set (i.e. all states of A, or all states of B etc.) represents a trait that affects diversification.
 For example, my focal trait is AP, so trait dependent diversification will not capture diversification increases due to flying habits (bats), gulp feeding (whales), granivory (rodents) etc., but all these cannot be reliably model by a single hidden state, and will require multiple hidden states. 
@@ -75,11 +79,6 @@ phylogenies with thousands of species."
 to be represented in >10% of the species, because the power of the trait-dependent models has been shown to 
 be severely affected when high tip ratio bias is observed (Alves, Diniz-Filho, & Villalobos, 2017; Davis, 
 Midford, & Maddison, 2013)."
-
-
-```{r pressure, echo=FALSE}
-plot(pressure)
-```
 
 Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
 
