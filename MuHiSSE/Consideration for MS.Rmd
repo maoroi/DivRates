@@ -86,3 +86,8 @@ Note that the `echo = FALSE` parameter was added to the code chunk to prevent pr
 ```{r}
 
 ```
+
+## **Discussion**
+* Key innovations do not necessarily result in increased diversification *rates*, but rather in greater total diversity (i.e. larger carrying capacity), and therefore increased diversification rate should not be a criterion for defining key innovations [Rabosky 2017, Phil Trans]. Yet, carrying capacity is not measurable in nature, making Rabosky's definition impractical.  
+
+* innovations that are too recent wouldn't have had enough time to diversifiy meaningfully, whereas innovations that are too old would have given the non-bearer (comparable sister lineages) time to diversify due to other trait, erasing the advantage of the focal innovation. Rabosky [2017, Phil Trans] mentions the ephemeral signature of diversification increases on the overall evolutionary picture.

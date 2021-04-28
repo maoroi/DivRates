@@ -62,10 +62,10 @@ CorTax <- function(tree){
     tree$tip.label[which(tree$tip.label == "Procolobus_preussi")]   <- "Piliocolobus_preussi"   # genus transfer v1
     tree$tip.label[which(tree$tip.label == "Procolobus_pennantii")] <- "Piliocolobus_pennantii" # genus transfer v1
     tree$tip.label[which(tree$tip.label == "Procolobus_rufomitratus")]  <- "Piliocolobus_rufomitratus"   # genus transfer v1
-    tree <- drop.tip(tree, which(!tree$tip.label %in% act3$Phylo_name))
+    tree <- drop.tip(tree, which(!tree$tip.label %in% data$Phylo_name))
 }
 
-# * 2 Phylogenetic data (see also 1.4) ------------------------------------------
+# * 2.1 Phylogenetic data (see also 1.4) ----------------------------------
 phy1 <- read.tree("C:/Users/Roi Maor/Desktop/New Mam Phylo/Completed_5911sp_topoCons_NDexp/MamPhy_BDvr_Completed_5911sp_topoCons_NDexp_v2_tree0000.tre")
 tree <- ladderize(phy1)
 
@@ -74,9 +74,9 @@ tree <- ladderize(phy1)
 #plot(phy1, type='fan', cex=0.15, label.offset = 0.05)
 #dev.off()
 
-## random sample of 250 trees out of 10k from Upham 2019
+## random sample of trees out of 10k variants from Upham et al. 2019
 indices <- sprintf("%04d", sample(0:9999, 5000, replace=FALSE)) # sprintf makes all samples indices 4-digit long
-
+# make MCC tree
 for (i in 1:length(indices)){
     phyfile <- paste0("C:/Users/Roi Maor/Desktop/New Mam Phylo/Completed_5911sp_topoCons_NDexp/MamPhy_BDvr_Completed_5911sp_topoCons_NDexp_v2_tree",indices[i],".tre")
     treevar <- read.tree(phyfile)
@@ -88,8 +88,22 @@ for (i in 1:length(indices)){
 clades <- prop.part(trees)
 MCCtree <- maxCladeCred(trees, part = clades)
 
+is.ultrametric(MCCtree)
+UltMCCtree <- force.ultrametric(MCCtree)
+is.ultrametric(UltMCCtree)
 
-# * 3 Activity data  ----------------------------------------------------
+# * 2.2 Sample tree variants for analysis ---------------------------------
+## variants sampled out of the indices that were used for the MCC tree, to ensure consistency
+
+vars <- sample(1:5000, 50, replace=FALSE)
+for (j in 1:length(vars)){
+    phyfile <- paste0("C:/Users/Roi Maor/Desktop/New Mam Phylo/Completed_5911sp_topoCons_NDexp/MamPhy_BDvr_Completed_5911sp_topoCons_NDexp_v2_tree",indices[vars[j]],".tre")
+    treevar <- read.tree(phyfile)
+    treevar <- CorTax(treevar)
+    write.tree(treevar, file=paste0("C:/Users/Roi Maor/Desktop/2nd Chapter/DivRates/MuHiSSE/Data files/tree variants/treevar",indices[vars[j]],".nex"))
+}
+
+# * 3 Activity data  ------------------------------------------------------
 read.csv("ActivityData_MDD_v1.csv") -> data   # see file "Uploading taxonomy.r" for how this file was made
 
 # making sure names in data and in tree match
@@ -201,8 +215,9 @@ length(which(data$Phylo_name %in% tree$tip.label)) == 2424
 # * 5 Final data processing steps ---------------------------------------
 # read full data table (to save repeating the previous steps)
 data <- read.csv(file="ActivityData_MDD_v1_match.csv")
+act <- data[which(data$Phylo_name %in% tree$tip.label),]           
+
 # remove crepusculars
-act <- data
 length(which(act$AP == 'Crepuscular')) == 24
 act3 <- act[-which(act$AP == 'Crepuscular'),]
 
@@ -216,6 +231,10 @@ act3$AP[act3$AP == 'Diurnal'] <- 3
 act3 <- act3[which(act3$Phylo_name %in% tree$tip.label),]
 tree <- drop.tip(tree, which(!tree$tip.label %in% act3$Phylo_name))
 
+# prepare data for use on cluster
+write.table(act3[,c(6,5)], file="APdata_2400spp.txt", append = FALSE, sep = " ", dec = ".",
+            row.names = FALSE, col.names = TRUE)
+
 # force ultrametric - placing this step after trimming the tree to save processing time
 is.ultrametric(tree)
 tree <- force.ultrametric(tree, "nnls")
@@ -225,10 +244,10 @@ is.ultrametric(tree)
 
 # * 6 Transforming to binary data (optional) ----------------------------
 ### THIS COULD ALSO BE DONE BY SETTING PARAMETER IDENTITIES IN THE MODELS
-#  * 6.1 Any daytime activity (N <-> CD dichotomy) ----------------------
+# * 6.1 Any daytime activity (N <-> CD dichotomy) ----------------------
 
 
-#  * 6.2 Only daytime activity (NC <-> D dichotomy ----------------------
+# * 6.2 Only daytime activity (NC <-> D dichotomy ----------------------
 
 
 #dat$C <- rep.int(0, nrow(dat))
@@ -243,4 +262,61 @@ for (i in 1:nrow(dat)){
 }
 
 
+
+
+
+# # 7 Plotting activity data on trees -------------------------------------
+phy1 <- read.tree("UltMCC_2424spp_4AP_5kvars.nex")
+tree <- ladderize(phy1)
+ 
+label <- character(length(tree$tip.label))
+names(label) <- act[which(act$Phylo_name %in% tree$tip.label),6]
+label[act$AP=="Nocturnal"] <- "dodgerblue3"
+label[act$AP=="Cathemeral"] <- "green3"
+label[act$AP=="Diurnal"] <- "gold"
+label[act$AP=="Crepuscular"] <- "magenta2"
+label[which(label[] == '')] <- "white" 
+
+
+
+# marking main orders
+{artio <- getMRCA(tree,c(which(tree$tip.label %in% act$Phylo_name[which(act$Order == 'Artiodactyla')])))
+    chiro <- getMRCA(tree,c(which(tree$tip.label %in% act$Phylo_name[which(act$Order == 'Chiroptera')])))
+    carni <- getMRCA(tree,c(which(tree$tip.label %in% act$Phylo_name[which(act$Order == 'Carnivora')])))
+    prim <- getMRCA(tree,c(which(tree$tip.label %in% act$Phylo_name[which(act$Order == 'Primates')])))
+    roden <- getMRCA(tree,c(which(tree$tip.label %in% act$Phylo_name[which(act$Order == 'Rodentia')])))
+    eulip <- getMRCA(tree,c(which(tree$tip.label %in% act$Phylo_name[which(act$Order %in% c('Erinaceomorpha','Soricomorpha'))])))
+    xenar <- getMRCA(tree,c(which(tree$tip.label %in% act$Phylo_name[which(act$Order %in% c('Cingulata','Pholidota','Pilosa'))])))
+    afro <- getMRCA(tree,c(which(tree$tip.label %in% act$Phylo_name[which(act$Order %in% c('Afrosoricida','Hyracoidea','Macroscelidea','Proboscidea','Sirenia','Tubulidentata'))])))
+}
+orders <- c(afro, xenar, eulip, chiro, roden, artio, prim, carni)
+labels <- c("Afrotheria","Xenarthra","Eulipotyphla","Chiroptera","Rodentia","Artiodactyla","Primates","Carnivora")
+
+
+pdf(file="DataMCC.pdf",width=40, height=40)
+plot(tree, type = "fan", lwd = 0.4, label.offset = 0.4, cex = 0.3, show.tip.label = TRUE, 
+     tip.color = "white")#, edge.color = BemEDGE[,3])
+ring(20, tree, style = "ring", offset = 5, col = label[tree$tip.label])
+# adding arcs for orders
+for(i in 1:4){#length(orders)) {
+    arc.cladelabels(tree, labels[i], orders[i], cex=6,
+                    MoreArgs = list(mark.node=FALSE, lab.offset=25, wing.length=0.5))
+}
+#ring(, tree, style = "ring", offset = -65.5, col = alpha("gray50", 0.25))
+dev.off()
+
+
+##OPTIONAL:
+# colour main order brnaches
+colours <- c("brown","cyan","green4","blue","darkorange2","goldenrod1","purple4","gray64")
+for (k in 1:length(orders)) {
+    AncNode <- orders[k]
+    CladeSpp <- Descendants(tree, AncNode, type="all")
+    edges <- BemEDGE[which(BemEDGE[,2] %in% CladeSpp),]
+    BemEDGE[which(BemEDGE[,2] == AncNode),3] <- as.character(colours[k]) ## colouring the order root branch
+    for (i in 1:length(edges[,2])) {
+        edges[i,3] <- as.character(colours[k])
+        BemEDGE[which(BemEDGE[,2] == edges[i,2]),3] <- edges[i,3]
+    }
+} 
 
