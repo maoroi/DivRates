@@ -181,38 +181,8 @@ trans.rate <- TransMatMakerMuHiSSE(hidden.traits=n-1, include.diagonals = FALSE,
 trans.rate.mod <- ParDrop(trans.rate, drops[1:(4*n)])   
 trans.rate.mod[,set_to_0] <- 0
 diag(trans.rate.mod) <- NA
-# brainless naming loop
-if (n==2){
-    turnover_2 <- turnover
-    extinction.fraction_2 <- extinction.fraction
-    trans.rate.mod_2 <- trans.rate.mod
-} else if (n==3){
-    turnover_3 <- turnover
-    extinction.fraction_3 <- extinction.fraction
-    trans.rate.mod_3 <- trans.rate.mod
-} else if(n==4){
-    turnover_4 <- turnover
-    extinction.fraction_4 <- extinction.fraction
-    trans.rate.mod_4 <- trans.rate.mod
-} else if (n==5) {
-    turnover_5 <- turnover
-    extinction.fraction_5 <- extinction.fraction
-    trans.rate.mod_5 <- trans.rate.mod
-} else if (n==6){
-    turnover_6 <- turnover
-    extinction.fraction_6 <- extinction.fraction
-    trans.rate.mod_6 <- trans.rate.mod
-} else if(n==7){
-    turnover_7 <- turnover
-    extinction.fraction_7 <- extinction.fraction
-    trans.rate.mod_7 <- trans.rate.mod
-} else if (n==8) {
-    turnover_8 <- turnover
-    extinction.fraction_8 <- extinction.fraction
-    trans.rate.mod_8 <- trans.rate.mod
 }
-}
-# optional: identical transition rates across hidden states
+# optional: identical transition rates across hidden states -- THINK CAREFULLY IF THIS MAKES SENSE!!
 #EqTransAcrossHiddenStates <- function(rateMatrix, n_HiddenStates) {
 #    lows <- 4*(1:(n_HiddenStates-1))+1
 #    highs <- 4*(2:n_HiddenStates)
