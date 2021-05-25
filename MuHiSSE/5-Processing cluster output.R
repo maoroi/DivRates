@@ -21,15 +21,18 @@ score$tree <- NA
 for (i in 1:nrow(score)){
     score$type[i] <- gsub("[0-9]", "", strsplit(rownames(score[i,]),"_")[[1]][1])       # model type
     score$states[i] <- gsub("[^0-9]", "", strsplit(rownames(score[i,]),"_")[[1]][1])    # no. of hidden states
-    if (i %% 13 == 1) {
+    if (strsplit(rownames(score[i,]),"_")[[1]][2] == "MCCtree.RDS") {
         score$tree[i] <- "MCC"                                                          # tree variant
     } else {
         score$tree[i] <- gsub("[^0-9]", "", strsplit(rownames(score[i,]),"_")[[1]][2])
     }
 } 
-rownames(score) <- NULL
-write.csv(score, file="score.csv")
+#rownames(score) <- NULL
+#write.csv(score, file="score.csv")
 
-
+### plotting likelihood as function of tree variant and model type
+p <- ggplot(score) +
+    geom_point(aes(tree, loglik, size = states, colour = type))
+p
 
 
