@@ -27,6 +27,8 @@ for (i in 1:nrow(score)){
         score$tree[i] <- gsub("[^0-9]", "", strsplit(rownames(score[i,]),"_")[[1]][2])
     }
 } 
+
+score[which(score$type %in% c('MuSSE','null')),5] <- 1  # fill in info for single state models 
 #rownames(score) <- NULL
 #write.csv(score, file="score.csv")
 
