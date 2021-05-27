@@ -1,4 +1,4 @@
-### Automating shell file generation
+### Automatic shell file generation
 
 # 1. Preliminary data -----------------------------------------------------
 # (this is a randomisation section and, to save resources, doesn't have to be re-run every time) 
@@ -7,6 +7,7 @@
 #indices <- read.csv(file="Indices_of_5k_vars_used_for_MCC.csv")
 #to_use <- sample(1:5000, 24, replace=FALSE) # choose 24 of the 5k trees used in the MCC
 #tree_no <- sprintf("%04d",indices[to_use,1])
+##write.csv(tree_no, file="Indices_of_24Semi-finalists.csv")
 #tree_no <- tree_no[c(2,4,6,8,10,12,14,16,18,20,22,24)] # halving repeats because life is too short
 #
 ## get trees and remove crepuscular tips
@@ -19,7 +20,7 @@
 #}
 
 
-# 2. Make files for null and MuSSE models ---------------------------------
+# 2. Make files for NULL and MuSSE models ---------------------------------
 
 dir.create(file.path("./Analyses/MuHiSSE/MuSSE"))
 dir.create(file.path("./Analyses/CID/null"))
@@ -979,5 +980,4 @@ saveRDS(tmp, file="CID8.RDS")
 
 
 
-#####################################################################################
-
+###  E N D  ###
