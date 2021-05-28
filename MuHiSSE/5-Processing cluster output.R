@@ -32,9 +32,34 @@ score[which(score$type %in% c('MuSSE','null')),5] <- 1  # fill in info for singl
 #rownames(score) <- NULL
 #write.csv(score, file="score.csv")
 
+## calculating mean values for tree variants
+Mscore <- score[1:48,]
+Mscore[1:24,] <- score[which(score$tree == "MCC"),]
+rownames(Mscore) <- NULL
+rownames(Mscore)[1:24] <- rownames(score)[which(score$tree == "MCC")]
+
+for (j in 2:8){
+    for (k in score$type){} 
+    
 ### plotting likelihood as function of tree variant and model type
-p <- ggplot(score) +
-    geom_point(aes(tree, loglik, size = states, colour = type))
+theme_set(theme_light(base_family = "Poppins"))
+p <- ggplot(score[which(score$states != 1),]) +
+    geom_point(aes(x=tree, loglik, colour = states)) + # use: "reorder(tree, -loglik, FUN = mean)" instead of "tree" to order trees by loglik
+    theme(axis.text.x = element_text(angle = 80, vjust = 1, hjust = 1)) +
+    facet_wrap(~type) + 
+    scale_color_viridis_d(option = "viridis", 
+                          alpha = .9,
+                          begin = 0,
+                          end = .9,
+                          direction = -1)
 p
+    
+ 
+d <- ggplot(score, aes(x = states, y = loglik, color = type)) #+
+    scale_color_viridis_d(option = "viridis", 
+                          alpha = .9,
+                          begin = 0,
+                          end = .9,
+                          direction = -1)
 
-
+d + geom_point()
