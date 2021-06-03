@@ -144,8 +144,8 @@ pdf(file="model type performance.pdf", width = 10, height = 8)
 ggplot(ordbyt) +
     geom_point(aes(x=states, loglik, colour = type), alpha= .7, size = 3) +  
     theme_light() +
-    facet_wrap(~tree) + 
-    scale_color_viridis_d(option = "viridis", 
+    facet_wrap(~tree, nrow = 2) + 
+    scale_color_viridis_d(option = "inferno", 
                           begin = 0,
                           end = .9,
                           direction = -1)
@@ -157,13 +157,15 @@ dev.off()
 pardat <- data.frame(t(sapply(allmods, extRDS_par)))
 params <- pardat[which(is.na(str_extract(names(pardat), ".10.")))]      # remove state "10" (disabled in all models)
 params <- params[which(is.na(str_extract(names(params), ".00..11.|.11..00.")))]  # remove 'diagonal' change (disabled in all)
-
+#
 # reminder: turnover = spec+ext; netDiv = spec-ext; extFrac = ext/spec 
+# symbols: turnover-tau; extFrac-eps; spec_rate-lambda; ext_rate-mu; 
+# Developing two equations w two unknowns on paper, got this:
 
-lambda = TO-myu = TO-(extFrac * lambda) = TO- 
-mu = extFrac*lambda = 
+lambda <- tau/(eps+1)
+mu <- tau-lambda  
 
-    
+div <- matrix(NA, nrow = length(allmods), ncol = )
     
 for (stat in as.numeric(score$states)) {
     
