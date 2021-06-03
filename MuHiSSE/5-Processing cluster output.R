@@ -145,7 +145,7 @@ ggplot(ordbyt) +
     geom_point(aes(x=states, loglik, colour = type), alpha= .7, size = 3) +  
     theme_light() +
     facet_wrap(~tree, nrow = 2) + 
-    scale_color_viridis_d(option = "inferno", 
+    scale_color_viridis_d(option = "viridis", #inferno, turbo, mako
                           begin = 0,
                           end = .9,
                           direction = -1)
@@ -157,18 +157,38 @@ dev.off()
 pardat <- data.frame(t(sapply(allmods, extRDS_par)))
 params <- pardat[which(is.na(str_extract(names(pardat), ".10.")))]      # remove state "10" (disabled in all models)
 params <- params[which(is.na(str_extract(names(params), ".00..11.|.11..00.")))]  # remove 'diagonal' change (disabled in all)
+
+
+# 2.1 calculate lambda and mu from composite rates ----------------------------
+
+#   reminder: turnover = spec+ext; netDiv = spec-ext; extFrac = ext/spec 
+#   symbols: turnover-tau; extFrac-eps; spec_rate-lambda; ext_rate-mu; 
+#   Developing two equations w two unknowns on paper, got this:
 #
-# reminder: turnover = spec+ext; netDiv = spec-ext; extFrac = ext/spec 
-# symbols: turnover-tau; extFrac-eps; spec_rate-lambda; ext_rate-mu; 
-# Developing two equations w two unknowns on paper, got this:
+#  // lambda = tau/(1+eps) \\ 
+#  \\ mu = tau-lambda      //
 
-lambda <- tau/(eps+1)
-mu <- tau-lambda  
 
-div <- matrix(NA, nrow = length(allmods), ncol = )
-    
-for (stat in as.numeric(score$states)) {
-    
+div <- params           # create a mirror table to write lambda and mu values into
+div[,which(is.na(str_extract(names(params), "q.")))] <- NA  # remove composite rates
+# iterate over all models and calculate lambda and mu for each
+for (i in colnames(params)) {
+    if (is.na(str_extract(i, "turn.")) == FALSE) {
+        index <- strsplit(i, "over")[[1]][2]
+        corr_rate <- which(colnames(params) == paste0("eps", index))
+        for (j in rownames(params)) {
+            div[j,i] <- params[j,i] / (1 + params[j,corr_rate])
+        }
+        colnames(div)[which(colnames(div) == i)] <- paste0("lambda",index)
+    } else if (is.na(str_extract(i, "eps.")) == FALSE) {
+        index <- strsplit(i, "eps")[[1]][2]
+        corr_rate <- which(colnames(div) == paste0("lambda", index))
+        for (j in rownames(params)) {
+            div[j,i] <- params[j,i] * div[j,corr_rate]
+        }
+        colnames(div)[which(colnames(div) == i)] <- paste0("mu",index)
+    }
 }
+
 #
 #
