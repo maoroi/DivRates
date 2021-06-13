@@ -1,5 +1,9 @@
 ### Processing output from MuHiSSE models (run on cluster)
 
+library("tidyverse") 
+
+#* Function definitions ------------------------------------------------------
+
 extRDS <- function(file){
     tmp <- readRDS(file)
     res <- tmp[c(1:3)]
@@ -44,32 +48,28 @@ for (i in 1:nrow(score)){
     } else {
         score$tree[i] <- gsub("[^0-9]", "", strsplit(rownames(score[i,]),"_")[[1]][2])}
 } 
-
-score[which(score$type %in% c('MuSSE','null')),5] <- 1  # fill in info for single state models 
+# adjust info for single state models 
+score[which(score$type %in% c('MuSSE','null')),5] <- 1  
 score$npar[which(score$type == 'MuSSE')] <- 8
 score$type[which(score$type == 'MuSSE')] <- 'MuHiSSE'
 score$npar[which(score$type == 'null')] <- 6
 score$type[which(score$type == 'null')] <- 'CID'
+#write.csv(score, file="score.csv", row.names = FALSE)
 
-
-#rownames(score) <- NULL
-#write.csv(score, file="score.csv")
 ord <- score[order(score$AICc),]
 ord <- ord[,c("tree","type","states","loglik","npar","AIC","AICc")]
 ordbyt <- data.frame()
+# calculate relative model support for each tree
 for (z in unique(ord$tree)) {
-    dat <- ord[ord$tree == z,]
+    dat <- ord[which(ord$tree == z),]
     dat <- dat[order(dat$AICc),]
-    dat$diff_AIC <- NA
-    dat$rel_lik <- NA
-    for (i in 1:nrow(dat)) {
-        dat$diff_AIC[i] <- dat$AICc[i] - min(dat$AICc)
-        dat$rel_lik[i] <- exp(-0.5 * dat$diff_AIC[i])
-    }
+    dat$diff_AIC <- dat$AICc - min(dat$AICc)
+    dat$rel_lik <- exp(-0.5 * dat$diff_AIC)
+    dat$weight <- dat$rel_lik / sum(dat$rel_lik)
     ordbyt <- rbind(ordbyt, dat[order(dat$diff_AIC, decreasing = FALSE),])
 }
-ordbyt <- ord[order(ord$tree, ord$AICc),]
-#write.csv(ord, file="score_ordered.csv")
+ordbyt <- ordbyt[order(ordbyt$tree, ordbyt$AICc),]
+#write.csv(ordbyt, file="Model fit by tree.csv")
 
 
 # * Diagnostic plots ----------------------------------------------------------
@@ -83,60 +83,39 @@ setwd("C:/Users/Roi Maor/Desktop/2nd Chapter/DivRates/MuHiSSE")
 df1 <- score[score$states == 1,]
 pdf(file = "likelihood by model type.pdf",width = 10, height = 10)  #png(file = "likelihood by model type.png",width = 7, height = 8.5, units = "in", res=800)
 ggplot(score) +
-    geom_point(aes(x=tree, loglik, colour = states), alpha= .8, size = 2) + # use: "reorder(tree, -loglik, FUN = mean)" instead of "tree" to order trees by loglik
+    geom_point(aes(x=tree, loglik, colour = as.factor(states)), alpha= .8, size = 2) + # use: "reorder(tree, -loglik, FUN = mean)" instead of "tree" to order trees by loglik
     geom_point(data = df1, aes(tree, loglik), colour = 'grey20', shape = 1, size = 2) + 
     theme_light() +
     theme(axis.text.x = element_text(angle = 80, vjust = 1, hjust = 1)) +
+    labs(color = "States") +
     facet_wrap(~type) + #, nrow = 1) + 
-    scale_color_viridis_d(option = "viridis", 
-                          begin = 0,
-                          end = .9,
-                          direction = -1)
+    scale_color_viridis_d(option = "viridis", begin = 0, end = .9, direction = -1)
 dev.off()
- 
 
 pdf(file = "likelihood by no. of states.pdf", width = 7, height = 8.5)
-ggplot(score[which(score$states != 1),]) +
-    geom_point(aes(x=states, loglik, colour = tree), alpha= .5, size = 2) + # use: "reorder(tree, -loglik, FUN = mean)" instead of "tree" to order trees by loglik
+ggplot(score) +
+    geom_point(aes(x=states, loglik, colour = reorder(tree, loglik, FUN = mean)), alpha= .5, size = 2) + # use: "reorder(tree, -loglik, FUN = mean)" instead of "tree" to order trees by loglik
+    geom_point(data = score[score$tree == "MCC",], aes(states, loglik), colour = 'grey20', shape = 3, size = 2) + 
     theme(axis.text.x = element_text(angle = 80, vjust = 1, hjust = 1)) +
+    labs(color = "Tree variant") +
     facet_wrap(~type,) + 
-    scale_color_viridis_d(option = "viridis", 
-                          alpha = .9,
-                          begin = 0,
-                          end = .9,
-                          direction = -1)
+    scale_color_viridis_d(option = "turbo", alpha = .9, begin = 0, end = .9, direction = -1)
 dev.off()
-
 
 # comparing likelihood of all models, divided to model type and no. of states, grouped by tree
 pdf(file="likelihood by states_MCC marked.pdf", width = 10, height = 8)
-df2 <- subset(score, score$tree =="MCC")    # get only MCC models separately
+df1 <- score[score$states != 1,]
+df2 <- subset(df1, df1$tree =="MCC")    # get only MCC models separately
 
-ggplot(score, aes(x = tree, y = loglik, colour = states)) +
+ggplot(df1, aes(x = reorder(tree, loglik, FUN = max), y = loglik, colour = as.factor(states))) +
     geom_point(alpha= .8, size = 2) + 
-    geom_point(data = df2, colour = 'white', shape = 3, size = 2) + 
-    geom_point(data = df1, aes(tree, loglik), colour = 'grey20', shape = 1, size = 2) + 
+    #geom_point(data = df2, colour = 'white', shape = 3, size = 2) + 
+    geom_point(data = df2, aes(tree, loglik), colour = 'grey20', shape = 1, size = 3) + 
     facet_wrap(~type) + 
     theme_light() +
     theme(axis.text.x = element_text(angle = 80, vjust = 1, hjust = 1)) +
-    scale_color_viridis_d(option = "inferno", 
-                          begin = 0.1,
-                          end = .9,
-                          direction = -1)
-dev.off()
-
-
-# comparing likelihood of all models, divided to trees and no. of states, grouped by model type
-pdf(file="likelihood by trees.pdf", width = 10, height = 8)
-ggplot(ordbyt) +
-    geom_point(aes(x=type, loglik, colour = factor(states)), alpha= .8, size = 2) +
-    theme_light() +
-    theme(axis.text.x = element_text(angle = 20, vjust = 1, hjust = 1)) +
-    facet_wrap(~tree, nrow = 3) + 
-    scale_color_viridis_d(option = "viridis", 
-                          begin = 0,
-                          end = .9,
-                          direction = -1)
+    labs(color = "States") +
+    scale_color_viridis_d(option = "viridis", begin = 0, end = .9, direction = -1)
 dev.off()
 
 # comparing model type performance
@@ -144,15 +123,26 @@ pdf(file="model type performance.pdf", width = 10, height = 8)
 ggplot(ordbyt) +
     geom_point(aes(x=states, loglik, colour = type), alpha= .7, size = 3) +  
     theme_light() +
-    facet_wrap(~tree, nrow = 2) + 
+    facet_wrap(~tree, nrow = 3) + 
     scale_color_viridis_d(option = "viridis", #inferno, turbo, mako
-                          begin = 0,
-                          end = .9,
-                          direction = -1)
+                          begin = 0, end = .9, direction = -1)
 dev.off()
 
+# comparing likelihood of all models, divided to trees and no. of states, grouped by model type
+#pdf(file="likelihood by trees.pdf", width = 10, height = 8)
+#ggplot(ordbyt) +
+#    geom_point(aes(x=type, loglik, colour = factor(states)), alpha= .8, size = 2) +
+#    theme_light() +
+#    theme(axis.text.x = element_text(angle = 20, vjust = 1, hjust = 1)) +
+#    facet_wrap(~tree, nrow = 3) + 
+#    scale_color_viridis_d(option = "viridis", 
+#                          begin = 0,
+#                          end = .9,
+#                          direction = -1)
+#dev.off()
 
 # 2. Parameter estimates ------------------------------------------------------
+setwd("C:/Users/Roi Maor/Desktop/2nd Chapter/DivRates/MuHiSSE/Analyses/ResultsCluster")
 
 pardat <- data.frame(t(sapply(allmods, extRDS_par)))
 params <- pardat[which(is.na(str_extract(names(pardat), ".10.")))]      # remove state "10" (disabled in all models)
@@ -189,6 +179,32 @@ for (i in colnames(params)) {
         colnames(div)[which(colnames(div) == i)] <- paste0("mu",index)
     }
 }
+setwd("C:/Users/Roi Maor/Desktop/2nd Chapter/DivRates/MuHiSSE")
+#write.csv(div, file="Rates of Evolution.csv", row.names = TRUE)
 
+# combine fit and params estimates to one table
+results <- ordbyt
+filler <- matrix(NA, nrow = nrow(ordbyt), ncol = ncol(div))
+colnames(filler) <- colnames(div)
+results <- cbind(ordbyt, filler)
+for (i in 1:nrow(ordbyt)) {
+    results[i,] <- cbind(ordbyt[i,], div[which(rownames(div) == rownames(ordbyt)[i]),])
+}
+#write.csv(results, file = "Model estimates exploratory.csv")
+
+
+# 2.2 Parameter estimates for leading models ----------------------------------
+
+# take all supported models
+leading <- results[which(rownames(results) %in% rownames(ordbyt)[which(ordbyt$diff_AIC < 6)]),]
+means <- colMeans(leading[-which(leading$tree == "MCC"),10:ncol(leading)])
+means <- c(rep(NA, 9), means)
+leading <- rbind(leading, means)
+#write.csv(leading, file="Best supported models.csv")
+
+est <-matrix(data=NA, ncol = 3, nrow = 5)
+colnames(est) <- c("Noct","Cath","Diur")
+rownames(est) <- c("Noct","Cath","Diur","Spec","Ext")
+est[c(3,11)] <- 0
 #
 #
