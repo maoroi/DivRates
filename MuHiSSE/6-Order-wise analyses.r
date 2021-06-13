@@ -88,9 +88,9 @@ for (ord in orders) {
             cat(paste0("#$ -wd /lustre/scratch/scratch/ucbtmao/MuHiSSE/VR/",ord), sep="\n")
             cat(" \n")
             cat("# Load the R module and run your R program", sep="\n")
-            cat("module unload compilers mpi", sep="\n")
-            cat("module load r/recommended", sep="\n")
-            cat("export R_LIBS=/home/ucbtmao/R/R-3.6.0-OpenBLAS:$R_LIBS", sep="\n")
+            cat("module -f unload compilers mpi gcc-libs", sep="\n")
+            cat("module load beta-modules", sep="\n")
+            cat("module load r/r-4.0.2_bc-3.11", sep="\n")
             cat(" \n")
             cat("# Copy all necessary files into TMPDIR", sep="\n")
             cat("cp ActivityData_MDD_v1_match.csv $TMPDIR", sep="\n")
@@ -189,24 +189,25 @@ act3[which(act3$AP == "Cathemeral"),"AP"] <- 2
 act3[which(act3$AP == "Diurnal"),"AP"] <- 3 \n\n')
             cat('# format data
 for (i in 1:length(tree$tip.label)){
-    tree$tip.state[i] <- as.numeric(act3$AP[which(act3$Phylo_name == tree$tip.label[i])])
-} \n\n')
+tree$tip.state[i] <- as.numeric(act3$AP[which(act3$Phylo_name == tree$tip.label[i])])
+} \n')
             cat('states <- data.frame(tree$tip.label, tree$tip.state, tree$tip.state)
 states_trans <- states
 for(i in 1:Ntip(tree)){
-    if(states[i,2] == 1){
-        states_trans[i,2] = 0
-        states_trans[i,3] = 0
-    }
-    if(states[i,2] == 2){
-        states_trans[i,2] = 0
-        states_trans[i,3] = 1
-    }
-    if(states[i,2] == 3){
-        states_trans[i,2] = 1
-        states_trans[i,3] = 1
-    }
+if(states[i,2] == 1){
+    states_trans[i,2] = 0
+    states_trans[i,3] = 0
+}
+if(states[i,2] == 2){
+    states_trans[i,2] = 0
+    states_trans[i,3] = 1
+}
+if(states[i,2] == 3){
+    states_trans[i,2] = 1
+    states_trans[i,3] = 1
+}
 } \n\n')
+            
             cat("# MuHiSSE \n") 
             cat(paste0("n <- ", n+1, "\n")) # set the number of hidden states
             cat("set_to_0 <- 4*(1:n)-1
@@ -263,9 +264,9 @@ tmp <- MuHiSSE(phy=tree, data=states_trans, f=freq,
             cat(paste0("#$ -wd /lustre/scratch/scratch/ucbtmao/CID/VR/",ord), sep="\n")
             cat("", sep="\n")
             cat("# Load the R module and run your R program", sep="\n")
-            cat("module unload compilers mpi", sep="\n")
-            cat("module load r/recommended", sep="\n")
-            cat("export R_LIBS=/home/ucbtmao/R/R-3.6.0-OpenBLAS:$R_LIBS", sep="\n")
+            cat("module -f unload compilers mpi gcc-libs", sep="\n")
+            cat("module load beta-modules", sep="\n")
+            cat("module load r/r-4.0.2_bc-3.11", sep="\n")
             cat("", sep="\n")
             cat("# Copy all necessary files into TMPDIR", sep="\n")
             cat("cp ActivityData_MDD_v1_match.csv $TMPDIR", sep="\n")
@@ -363,23 +364,23 @@ act3[which(act3$AP == "Cathemeral"),"AP"] <- 2
 act3[which(act3$AP == "Diurnal"),"AP"] <- 3 \n\n')
             cat('# format data
 for (i in 1:length(tree$tip.label)){
-    tree$tip.state[i] <- as.numeric(act3$AP[which(act3$Phylo_name == tree$tip.label[i])])
-} \n\n')
+tree$tip.state[i] <- as.numeric(act3$AP[which(act3$Phylo_name == tree$tip.label[i])])
+} \n')
             cat('states <- data.frame(tree$tip.label, tree$tip.state, tree$tip.state)
 states_trans <- states
 for(i in 1:Ntip(tree)){
-    if(states[i,2] == 1){
-        states_trans[i,2] = 0
-        states_trans[i,3] = 0
-    }
-    if(states[i,2] == 2){
-        states_trans[i,2] = 0
-        states_trans[i,3] = 1
-    }
-    if(states[i,2] == 3){
-        states_trans[i,2] = 1
-        states_trans[i,3] = 1
-    }
+if(states[i,2] == 1){
+    states_trans[i,2] = 0
+    states_trans[i,3] = 0
+}
+if(states[i,2] == 2){
+    states_trans[i,2] = 0
+    states_trans[i,3] = 1
+}
+if(states[i,2] == 3){
+    states_trans[i,2] = 1
+    states_trans[i,3] = 1
+}
 } \n\n')
             cat("# CID \n") 
             cat(paste0("n <- ", n+1, "\n")) # set the number of hidden states
@@ -392,20 +393,20 @@ turnover[set_to_0] <- extinction.fraction[set_to_0] <- 0 \n\n")
             cat('# transition rates
 trans.rate <- TransMatMakerMuHiSSE(hidden.traits=n-1, make.null = TRUE, cat.trans.vary = TRUE)
 trans.rate.mod <- ParDrop(trans.rate, c(2,5,6,8))
-if (n == 5) {
-    trans.rate.mod[which(trans.rate.mod == 23)] <- 24
-    trans.rate.mod[which(trans.rate.mod == 21)] <- 22
-    trans.rate.mod[which(trans.rate.mod == 20)] <- 21
-    trans.rate.mod[which(trans.rate.mod == 18)] <- 19
-    trans.rate.mod[which(trans.rate.mod == 17)] <- 18
-    trans.rate.mod[which(trans.rate.mod == 16)] <- 17
-    trans.rate.mod[which(trans.rate.mod == 15)] <- 16
-    
-    trans.rate.mod[17,] <- c(23,0,0,0, 20,0,0,0, 15,0,0,0, 8,0,0,0, NA,2,0,0)
-    trans.rate.mod[18,] <- c(0,23,0,0, 0,20,0,0, 0,15,0,0, 0,8,0,0, 1,NA,0,4)
-    trans.rate.mod[19,] <- c(0,0,0,0,  0,0,0,0,  0,0,0,0,  0,0,0,0, 0,0,NA,0)
-    trans.rate.mod[20,] <- c(0,0,0,23, 0,0,0,20, 0,0,0,15, 0,0,0,8, 0,3,0,NA)
-}
+#if (n == 5) {      # this patch was only needed for hisse v1.9.18 or lower. Fixed in v1.9.19
+#    trans.rate.mod[which(trans.rate.mod == 23)] <- 24
+#    trans.rate.mod[which(trans.rate.mod == 21)] <- 22
+#    trans.rate.mod[which(trans.rate.mod == 20)] <- 21
+#    trans.rate.mod[which(trans.rate.mod == 18)] <- 19
+#    trans.rate.mod[which(trans.rate.mod == 17)] <- 18
+#    trans.rate.mod[which(trans.rate.mod == 16)] <- 17
+#    trans.rate.mod[which(trans.rate.mod == 15)] <- 16
+#    
+#    trans.rate.mod[17,] <- c(23,0,0,0, 20,0,0,0, 15,0,0,0, 8,0,0,0, NA,2,0,0)
+#    trans.rate.mod[18,] <- c(0,23,0,0, 0,20,0,0, 0,15,0,0, 0,8,0,0, 1,NA,0,4)
+#    trans.rate.mod[19,] <- c(0,0,0,0,  0,0,0,0,  0,0,0,0,  0,0,0,0, 0,0,NA,0)
+#    trans.rate.mod[20,] <- c(0,0,0,23, 0,0,0,20, 0,0,0,15, 0,0,0,8, 0,3,0,NA)
+#}
 trans.rate.mod[,set_to_0] <- 0
 diag(trans.rate.mod) <- NA
 tmp <- MuHiSSE(phy=tree, data=states_trans, f=freq, 
