@@ -65,7 +65,7 @@ for (z in unique(ord$tree)) {
     dat <- dat[order(dat$AICc),]
     dat$diff_AIC <- dat$AICc - min(dat$AICc)
     dat$rel_lik <- exp(-0.5 * dat$diff_AIC)
-    dat$weight <- dat$rel_lik / sum(dat$rel_lik)
+    dat$weight <- dat$rel_lik / sum(dat$rel_lik) # this is identical to rel_lik on most trees
     ordbyt <- rbind(ordbyt, dat[order(dat$diff_AIC, decreasing = FALSE),])
 }
 ordbyt <- ordbyt[order(ordbyt$tree, ordbyt$AICc),]
@@ -149,19 +149,18 @@ params <- pardat[which(is.na(str_extract(names(pardat), ".10.")))]      # remove
 params <- params[which(is.na(str_extract(names(params), ".00..11.|.11..00.")))]  # remove 'diagonal' change (disabled in all)
 
 
-# 2.1 calculate lambda and mu from composite rates ----------------------------
+# 2.1 calculate s and mu from composite rates ----------------------------
 
 #   reminder: turnover = spec+ext; netDiv = spec-ext; extFrac = ext/spec 
-#   symbols: turnover-tau; extFrac-eps; spec_rate-lambda; ext_rate-mu; 
+#   symbols: turnover-tau; extFrac-eps; spec_rate-s; ext_rate-mu; netDiv-lambda;
 #   Developing two equations w two unknowns on paper, got this:
 #
-#  // lambda = tau/(1+eps) \\ 
-#  \\ mu = tau-lambda      //
+#  // s = tau/(1+eps) \\ 
+#  \\ mu = tau-s      //
 
-
-div <- params           # create a mirror table to write lambda and mu values into
+div <- params           # create a mirror table to write s and mu values into
 div[,which(is.na(str_extract(names(params), "q.")))] <- NA  # remove composite rates
-# iterate over all models and calculate lambda and mu for each
+# iterate over all models and calculate s and mu for each
 for (i in colnames(params)) {
     if (is.na(str_extract(i, "turn.")) == FALSE) {
         index <- strsplit(i, "over")[[1]][2]
@@ -169,10 +168,10 @@ for (i in colnames(params)) {
         for (j in rownames(params)) {
             div[j,i] <- params[j,i] / (1 + params[j,corr_rate])
         }
-        colnames(div)[which(colnames(div) == i)] <- paste0("lambda",index)
+        colnames(div)[which(colnames(div) == i)] <- paste0("s",index)
     } else if (is.na(str_extract(i, "eps.")) == FALSE) {
         index <- strsplit(i, "eps")[[1]][2]
-        corr_rate <- which(colnames(div) == paste0("lambda", index))
+        corr_rate <- which(colnames(div) == paste0("s", index))
         for (j in rownames(params)) {
             div[j,i] <- params[j,i] * div[j,corr_rate]
         }
@@ -197,14 +196,28 @@ for (i in 1:nrow(ordbyt)) {
 
 # take all supported models
 leading <- results[which(rownames(results) %in% rownames(ordbyt)[which(ordbyt$diff_AIC < 6)]),]
+#leading <- leading[order(leading$states),]
+# calculate trait-dependent netDiv values per state
+for (states in 1:5) {
+    for (patt in c("00","01","11")) {
+        s_rate <- paste0("s",patt,LETTERS[states])
+        mu_rate <- paste0("mu",patt,LETTERS[states])
+        leading$new <- leading[,which(colnames(leading) == s_rate)] - leading[,which(colnames(leading) == mu_rate)]
+        if (states == 5) {
+            leading$new[which(leading$new == 0)] <- NA
+        }
+    colnames(leading)[ncol(leading)] <- paste0("lambda",patt,LETTERS[states])
+    }
+}
+
 means <- colMeans(leading[-which(leading$tree == "MCC"),10:ncol(leading)])
 means <- c(rep(NA, 9), means)
 leading <- rbind(leading, means)
+rownames(leading)[which(is.na(leading$tree))] <- "mean_12trees"
+# remove rates not considered in the model (states F, G, H)
+leading <- leading[which(is.na(str_extract(colnames(leading), "..F|..G|..H")))]  
 #write.csv(leading, file="Best supported models.csv")
 
-est <-matrix(data=NA, ncol = 3, nrow = 5)
-colnames(est) <- c("Noct","Cath","Diur")
-rownames(est) <- c("Noct","Cath","Diur","Spec","Ext")
-est[c(3,11)] <- 0
+
 #
 #
