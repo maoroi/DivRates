@@ -5,12 +5,6 @@ setwd("C:/Users/Roi Maor/Desktop/2nd Chapter/DivRates/MuHiSSE")
 
 # 1. Prepare data for binary analyses -----------------------------------------
 data <- read.csv('ActivityData_MDD_v1_match.csv')
-# total count in the entire dataset (inc species not in the phylogeny)
-TotN <- length(which(data$AP == 'Nocturnal'))
-TotCD <- length(which(data$AP %in% c('Cathemeral','Diurnal')))
-# proportions in data (sum up to 99%, crepuscular and others make the rest)
-datN <- TotN / nrow(data)
-datCD <- TotCD / nrow(data)
 
 ## 1.1 Assumptions ------------------------------------------------------------
 tax <- read.csv("C:/Users/Roi Maor/Desktop/New Mam Phylo/Burgin taxonomy/MDD_v1_6495species_JMamm.csv", header = TRUE)
@@ -41,37 +35,57 @@ Nunsamp <- bats_unsamp + FLY_SQRLS_unsamp
 Dunsamp <- Diur_sqrls_unsamp + simi_diur_unsamp
 rm(bats_unsamp, FLY_SQRLS_unsamp, Diur_sqrls_unsamp, simi_diur_unsamp, PRIMS, simians, 
    simian_count, SIMIAN_DATA, Aotus_unsamp, noct_sqrls, flying, SQRLS_DATA, SQRLS)
-##      ** end assumptions **       ##
+###    ** end assumptions **    ###
 
-## 1.2 Estimate sampling fraction ---------------------------------------------
+
+## 1.2 *** GROUPING N-CD *** ---------------------------------------------------
+# total count in the entire dataset (inc species not in the phylogeny)
+#TotN <- length(which(data$AP == 'Nocturnal'))
+#TotCD <- length(which(data$AP %in% c('Cathemeral','Diurnal')))
+#datN <- TotN / nrow(data)
+#datCD <- TotCD / nrow(data)
+
+## 1.3 *** ALTERNATIVE GROUPING: D-CN ------------------------------------------
+# total count in the entire dataset (inc species not in the phylogeny)
+TotCN <- length(which(data$AP %in% c('Cathemeral','Nocturnal')))
+TotD <- length(which(data$AP == 'Diurnal'))
+datCN <- TotCN / nrow(data)
+datD <- TotD / nrow(data)
+
+## 1.4 Estimate sampling fraction ---------------------------------------------
 # species with no data or assumptions
 all_extant <- length(unique(tax$SciName[which(tax$extinct. == 0)]))
 unkn <- all_extant - (nrow(data) + Nunsamp + Dunsamp)                   # total number of extant species based on MDD v1
 # expected AP distribution in unknown species if same proportion as in the data
-expN <- datN * unkn
-expCD <- datCD * unkn
+expCN <- datCN * unkn
+expD <- datD * unkn
 # proportion sampled out of likely total
-Nprop <- TotN / (TotN + Nunsamp + expN)
-CDprop <- TotCD / (TotCD + Dunsamp + expCD)
+CNprop <- TotCN / (TotCN + Nunsamp + expCN)
+Dprop <- TotD / (TotD + Dunsamp + expD)
+
 #> c(Nprop, CDprop)
 #[1] 0.3523062 0.4322946
 freq <- c(Nprop, CDprop)
 
-
-
+#> c(CNprop, Dprop)
+#[1] 0.3714350 0.4083013
+freq <- c(CNprop, Dprop)
 
 # 2. BiSSE and CID null models ------------------------------------------------
 
 #### This code generates shell files and R scripts for running HiSSE and MuCID models
 # on _binary_ AP data (Cath lumped with Noct or Diur)
 
-dir.create(file.path("./Analyses/Binary/HiSSE"), recursive = TRUE)   # create 'Analyses' directory as well
-dir.create(file.path("./Analyses/Binary/CID"))
+#dir.create(file.path("./Analyses/Binary/D-CD/HiSSE"), recursive = TRUE)   # create 'Analyses' directory as well
+#dir.create(file.path("./Analyses/Binary/N-CD/CID"))
+
+dir.create(file.path("./Analyses/Binary/D-CN/HiSSE"), recursive = TRUE)   # create 'Analyses' directory as well
+dir.create(file.path("./Analyses/Binary/D-CN/CID"))
 
 for (n in 1:7) {
     
     ## 1.1 Generate null and BiSSE files for MCC tree ------------------------- 
-    {f <- file(paste0("./Analyses/Binary/HiSSE/BiSSE_MCCtree.sh"), open = "wb")
+    {f <- file(paste0("./Analyses/Binary/D-CN/HiSSE/BiSSE_MCCtree_D-CN.sh"), open = "wb")
     sink(file=f)
         cat("#!/bin/bash -l", sep="\n")
         cat("", sep="\n")
@@ -92,7 +106,7 @@ for (n in 1:7) {
         cat("# This is a necessary step as compute nodes cannot write to $HOME.", sep="\n")
         cat("# NOTE: this directory must exist.", sep="\n")
         # variable line
-        cat("#$ -wd /lustre/scratch/scratch/ucbtmao/Binary/HiSSE/", sep="\n")
+        cat("#$ -wd /lustre/scratch/scratch/ucbtmao/Binary/D-CN/HiSSE/", sep="\n")
         cat("", sep="\n")
         cat("# Load the R module and run your R program", sep="\n")
         cat("module -f unload compilers mpi gcc-libs", sep="\n")
@@ -105,40 +119,40 @@ for (n in 1:7) {
         # variable line
         cat("cp UltMCC_2400spp_3AP_5kvars.nex $TMPDIR", sep="\n")
         # variable line
-        cat("cp BiSSE_MCCtreeCode.R $TMPDIR", sep="\n")
+        cat("cp BiSSE_MCCtreeCode_D-CN.R $TMPDIR", sep="\n")
         cat("", sep="\n")
         cat("# Your work should be done in $TMPDIR", sep="\n")
         cat("cd $TMPDIR", sep="\n")
         cat("", sep="\n")
         cat("# state program running time", sep="\n")
         # variable line
-        cat(paste0("/usr/bin/time --verbose R --no-save < /lustre/scratch/scratch/ucbtmao/Binary/HiSSE/BiSSE_MCCtreeCode.R> BiSSE_MCCtreeCode.out"), sep="\n")
+        cat(paste0("/usr/bin/time --verbose R --no-save < /lustre/scratch/scratch/ucbtmao/Binary/D-CN/HiSSE/BiSSE_MCCtreeCode_D-CN.R> BiSSE_MCCtreeCode.out"), sep="\n")
         cat("", sep="\n")
         cat("# tar-up (archive) all output files to transfer them back to your space.", sep="\n")
         # variable line
-        cat("tar -zcvf $HOME/Scratch/Binary/HiSSE/files_from_job_$JOB_ID.tgz $TMPDIR", sep="\n")
+        cat("tar -zcvf $HOME/Scratch/Binary/D-CN/HiSSE/files_from_job_$JOB_ID.tgz $TMPDIR", sep="\n")
         cat("", sep="\n")
         # variable line
-        cat(paste0("cp BiSSE_MCCtree.RDS /lustre/scratch/scratch/ucbtmao/Binary/HiSSE"), sep="\n")
+        cat(paste0("cp BiSSE_MCCtree_D-CN.RDS /lustre/scratch/scratch/ucbtmao/Binary/D-CN/HiSSE"), sep="\n")
     sink()
     close(f)
     
     # HiSSE R file (the messy tab-alignment here makes the resulting file tidier)
-    sink("./Analyses/Binary/HiSSE/BiSSE_MCCtreeCode.R")
+    sink("./Analyses/Binary/D-CN/HiSSE/BiSSE_MCCtreeCode_D-CN.R")
         cat("# load required packages \n")
         cat('Packages <- c("hisse", "diversitree", "phytools")\n')
         cat("lapply(Packages, library, character.only = TRUE) \n\n")
         cat("# load data and tree \n")
         cat("act3 <- read.table(file=\"APdata_2400spp.txt\") \n")
-        cat("freq <- c(0.3523062, 0.4322946) \n")
+        cat("freq <- c(0.3714350, 0.4083013) \n") # c(0.3714350, 0.4083013) is correct for D-CN
         cat(paste0("tree <- read.tree(\"UltMCC_2400spp_3AP_5kvars.nex\") \n\n"))
         cat('# format data \n')
         cat('for (i in 1:length(tree$tip.label)){ \n')
         cat('tree$tip.state[i] <- as.numeric(act3$AP[which(act3$Phylo_name == tree$tip.label[i])])} \n')
         cat('states <- data.frame(tree$tip.label, tree$tip.state) \n')
         cat('states_trans <- states \n')
-        cat('states_trans[,2] <- states_trans[,2] - 1 \n')
-        cat('states_trans[which(states_trans[,2] > 0),2] <- 1 # lump C + D together \n\n')
+        cat('states_trans[which(states_trans[,2] < 3),2] <- 0 \n')
+        cat('states_trans[which(states_trans[,2] == 3),2] <- 1 \n\n')
         cat("# BiSSE \n") 
         cat('# div rates \n')
         cat('turnover <- c(1,2) \n')      
@@ -153,12 +167,12 @@ for (n in 1:7) {
            hidden.states=FALSE, 
            sann = TRUE) \n')
         
-        cat(paste0("saveRDS(tmp, file=\"BiSSE_MCCtree.RDS\")"))
+        cat(paste0("saveRDS(tmp, file=\"BiSSE_MCCtree_D-CN.RDS\")"))
     sink()
 }    
         
         # CID Shell file
-        f <- file(paste0("./Analyses/Binary/CID/nullbin_MCCtree.sh"), open = "wb")
+        f <- file(paste0("./Analyses/Binary/D-CN/CID/nullbin_MCCtree_D-CN.sh"), open = "wb")
         sink(file=f)
             cat("#!/bin/bash -l", sep="\n")
             cat("", sep="\n")
@@ -179,7 +193,7 @@ for (n in 1:7) {
             cat("# This is a necessary step as compute nodes cannot write to $HOME.", sep="\n")
             cat("# NOTE: this directory must exist.", sep="\n")
             # variable line
-            cat("#$ -wd /lustre/scratch/scratch/ucbtmao/Binary/CID/", sep="\n")
+            cat("#$ -wd /lustre/scratch/scratch/ucbtmao/Binary/D-CN/CID/", sep="\n")
             cat("", sep="\n")
             cat("module -f unload compilers mpi gcc-libs", sep="\n")
             cat("module load beta-modules", sep="\n")
@@ -191,40 +205,40 @@ for (n in 1:7) {
             # variable line
             cat("cp UltMCC_2400spp_3AP_5kvars.nex $TMPDIR", sep="\n")
             # variable line
-            cat(paste0("cp nullbin_MCCtreeCode.R $TMPDIR"), sep="\n")
+            cat(paste0("cp nullbin_MCCtreeCode_D-CN.R $TMPDIR"), sep="\n")
             cat("", sep="\n")
             cat("# Your work should be done in $TMPDIR", sep="\n")
             cat("cd $TMPDIR", sep="\n")
             cat("", sep="\n")
             cat("# state program running time", sep="\n")
             # variable line
-            cat(paste0("/usr/bin/time --verbose R --no-save < /lustre/scratch/scratch/ucbtmao/Binary/CID/nullbin_MCCtreeCode.R> nullbin_MCCtreeCode.out"), sep="\n")
+            cat(paste0("/usr/bin/time --verbose R --no-save < /lustre/scratch/scratch/ucbtmao/Binary/D-CN/CID/nullbin_MCCtreeCode_D-CN.R> nullbin_MCCtreeCode.out"), sep="\n")
             cat("", sep="\n")
             cat("# tar-up (archive) all output files to transfer them back to your space.", sep="\n")
             # variable line
-            cat("tar -zcvf $HOME/Scratch/Binary/CID/files_from_job_$JOB_ID.tgz $TMPDIR", sep="\n")
+            cat("tar -zcvf $HOME/Scratch/Binary/D-CN/CID/files_from_job_$JOB_ID.tgz $TMPDIR", sep="\n")
             cat("", sep="\n")
             # variable line
-            cat(paste0("cp nullbin_MCCtree.RDS /lustre/scratch/scratch/ucbtmao/Binary/CID"), sep="\n")
+            cat(paste0("cp nullbin_MCCtree_D-CN.RDS /lustre/scratch/scratch/ucbtmao/Binary/D-CN/CID"), sep="\n")
         sink()
         close(f)
         
         # CID R file (the messy tab-alignment here makes the resulting file tidier)
-        sink(paste0("./Analyses/Binary/CID/nullbin_MCCtreeCode.R"))
+        sink(paste0("./Analyses/Binary/D-CN/CID/nullbin_MCCtreeCode_D-CN.R"))
             cat("# load required packages \n")
             cat('Packages <- c("hisse", "diversitree", "phytools")\n')
             cat("lapply(Packages, library, character.only = TRUE) \n\n")
             cat("# load data and tree \n")
             cat("act3 <- read.table(file=\"APdata_2400spp.txt\") \n")
-            cat("freq <- c(0.3523062, 0.4322946) \n")
+            cat("freq <- c(0.3714350, 0.4083013) \n") # c(0.3714350, 0.4083013) is correct for D-CN
             cat(paste0("tree <- read.tree(\"UltMCC_2400spp_3AP_5kvars.nex\") \n\n"))
             cat('# format data \n')
             cat('for (i in 1:length(tree$tip.label)){ \n')
             cat('tree$tip.state[i] <- as.numeric(act3$AP[which(act3$Phylo_name == tree$tip.label[i])])} \n')
             cat('states <- data.frame(tree$tip.label, tree$tip.state) \n')
             cat('states_trans <- states \n')
-            cat('states_trans[,2] <- states_trans[,2] - 1 \n')
-            cat('states_trans[which(states_trans[,2] > 0),2] <- 1 # lump C+D together \n\n')
+            cat('states_trans[which(states_trans[,2] < 3),2] <- 0 \n')
+            cat('states_trans[which(states_trans[,2] == 3),2] <- 1 \n\n')
             cat('## dull null ## \n') 
             cat('# div rates \n')
             cat('turnover <- c(1,1) \n')
@@ -235,7 +249,7 @@ for (n in 1:7) {
                 turnover=turnover, eps=extinction.fraction, 
                 trans.rate=trans.rate, hidden.states=FALSE, 
                 sann = TRUE) \n\n')
-            cat(paste0("saveRDS(tmp, file=\"nullbin_MCCtree.RDS\")"))
+            cat(paste0("saveRDS(tmp, file=\"nullbin_MCCtree_D-CN.RDS\")"))
         sink()
 }
 
@@ -246,7 +260,7 @@ tree_no <- sprintf("%04d",tree_no[,2])
 
 for (k in 1:length(tree_no)){
     # HiSSE Shell file
-    f <- file(paste0("./Analyses/Binary/HiSSE/BiSSE_tree", tree_no[k],".sh"), open = "wb")
+    f <- file(paste0("./Analyses/Binary/D-CN/HiSSE/BiSSE_tree", tree_no[k],"_D-CN.sh"), open = "wb")
     sink(file=f)
         cat("#!/bin/bash -l", sep="\n")
         cat("", sep="\n")
@@ -267,7 +281,7 @@ for (k in 1:length(tree_no)){
         cat("# This is a necessary step as compute nodes cannot write to $HOME.", sep="\n")
         cat("# NOTE: this directory must exist.", sep="\n")
         # variable line
-        cat("#$ -wd /lustre/scratch/scratch/ucbtmao/Binary/HiSSE/", sep="\n")
+        cat("#$ -wd /lustre/scratch/scratch/ucbtmao/Binary/D-CN/HiSSE/", sep="\n")
         cat("", sep="\n")
         cat("# Load the R module and run your R program", sep="\n")
         cat("module -f unload compilers mpi gcc-libs", sep="\n")
@@ -280,32 +294,32 @@ for (k in 1:length(tree_no)){
         # variable line
         cat(paste0("cp tree", tree_no[k],".nex $TMPDIR"), sep="\n")
         # variable line
-        cat(paste0("cp BiSSE_tree", tree_no[k],"Code.R $TMPDIR"), sep="\n")
+        cat(paste0("cp BiSSE_tree", tree_no[k],"Code_D-CN.R $TMPDIR"), sep="\n")
         cat("", sep="\n")
         cat("# Work should be done in $TMPDIR", sep="\n")
         cat("cd $TMPDIR", sep="\n")
         cat("", sep="\n")
         cat("# state program running time", sep="\n")
         # variable line
-        cat(paste0("/usr/bin/time --verbose R --no-save < /lustre/scratch/scratch/ucbtmao/Binary/HiSSE/BiSSE_tree", tree_no[k],"Code.R> BiSSE_tree", tree_no[k],"Code.out"), sep="\n")
+        cat(paste0("/usr/bin/time --verbose R --no-save < /lustre/scratch/scratch/ucbtmao/Binary/D-CN/HiSSE/BiSSE_tree", tree_no[k],"Code_D-CN.R> BiSSE_tree", tree_no[k],"Code.out"), sep="\n")
         cat("", sep="\n")
         cat("# tar-up (archive) all output files to transfer them back to your space.", sep="\n")
         # variable line
-        cat("tar -zcvf $HOME/Scratch/Binary/HiSSE/files_from_job_$JOB_ID.tgz $TMPDIR", sep="\n")
+        cat("tar -zcvf $HOME/Scratch/Binary/D-CN/HiSSE/files_from_job_$JOB_ID.tgz $TMPDIR", sep="\n")
         cat("", sep="\n")
         # variable line
-        cat(paste0("cp BiSSE_tree", tree_no[k],".RDS /lustre/scratch/scratch/ucbtmao/Binary/HiSSE"), sep="\n")
+        cat(paste0("cp BiSSE_tree", tree_no[k],"_D-CN.RDS /lustre/scratch/scratch/ucbtmao/Binary/D-CN/HiSSE"), sep="\n")
     sink()
     close(f)
     
     # HiSSE R file  (the messy tab-alignment here makes the resulting file tidier)
-    sink(paste0("./Analyses/Binary/HiSSE/BiSSE_tree", tree_no[k],"Code.R"))
+    sink(paste0("./Analyses/Binary/D-CN/HiSSE/BiSSE_tree", tree_no[k],"Code_D-CN.R"))
         cat("# load required packages \n")
         cat('Packages <- c("hisse", "diversitree", "phytools")\n')
         cat("lapply(Packages, library, character.only = TRUE) \n\n")
         cat("# load data and tree \n")
         cat("act3 <- read.table(file=\"APdata_2400spp.txt\") \n")
-        cat("freq <- c(0.3523062, 0.4322946) \n")
+        cat("freq <- c(0.3714350, 0.4083013) \n") # c(0.3714350, 0.4083013) is correct for D-CN
         cat(paste0("tree <- read.tree(\"tree", tree_no[k],".nex\") \n\n")) # load one tree variant
         cat('# format data
 for (i in 1:length(tree$tip.label)){
@@ -313,8 +327,8 @@ for (i in 1:length(tree$tip.label)){
 } \n')
         cat('states <- data.frame(tree$tip.label, tree$tip.state)
 states_trans <- states
-states_trans[,2] <- states_trans[,2] - 1
-states_trans[which(states_trans[,2] > 0),2] <- 1 # lump C + D together \n\n')
+states_trans[which(states_trans[,2] < 3),2] <- 0
+states_trans[which(states_trans[,2] == 3),2] <- 1 \n\n')
     cat("# BiSSE simple \n") 
     cat('# div rates 
 turnover <- c(1,2)          
@@ -328,12 +342,12 @@ tmp <- hisse(phy=tree, data=states_trans, f=freq,
                hidden.states=FALSE, 
                sann = TRUE) \n')
     
-    cat(paste0("saveRDS(tmp, file=\"BiSSE_tree", tree_no[k],".RDS\")"))
+    cat(paste0("saveRDS(tmp, file=\"BiSSE_tree", tree_no[k],"_D-CN.RDS\")"))
     sink()
     
    
     # CID Shell file
-    f <- file(paste0("./Analyses/Binary/CID/nullbin_tree", tree_no[k],".sh"), open = "wb")
+    f <- file(paste0("./Analyses/Binary/D-CN/CID/nullbin_tree", tree_no[k],"_D-CN.sh"), open = "wb")
     sink(file=f)
         cat("#!/bin/bash -l", sep="\n")
         cat("", sep="\n")
@@ -354,7 +368,7 @@ tmp <- hisse(phy=tree, data=states_trans, f=freq,
         cat("# This is a necessary step as compute nodes cannot write to $HOME.", sep="\n")
         cat("# NOTE: this directory must exist.", sep="\n")
         # variable line
-        cat("#$ -wd /lustre/scratch/scratch/ucbtmao/Binary/CID/", sep="\n")
+        cat("#$ -wd /lustre/scratch/scratch/ucbtmao/Binary/D-CN/CID/", sep="\n")
         cat("", sep="\n")
         cat("# Load the R module and run your R program", sep="\n")
         cat("module -f unload compilers mpi gcc-libs", sep="\n")
@@ -367,32 +381,32 @@ tmp <- hisse(phy=tree, data=states_trans, f=freq,
         # variable line
         cat(paste0("cp tree", tree_no[k],".nex $TMPDIR"), sep="\n")
         # variable line
-        cat(paste0("cp nullbin_tree", tree_no[k],"Code.R $TMPDIR"), sep="\n")
+        cat(paste0("cp nullbin_tree", tree_no[k],"Code_D-CN.R $TMPDIR"), sep="\n")
         cat("", sep="\n")
         cat("# Your work should be done in $TMPDIR", sep="\n")
         cat("cd $TMPDIR", sep="\n")
         cat("", sep="\n")
         cat("# state program running time", sep="\n")
         # variable line
-        cat(paste0("/usr/bin/time --verbose R --no-save < /lustre/scratch/scratch/ucbtmao/Binary/CID/nullbin_tree", tree_no[k],"Code.R> nullbin_tree", tree_no[k],"Code.out"), sep="\n")
+        cat(paste0("/usr/bin/time --verbose R --no-save < /lustre/scratch/scratch/ucbtmao/Binary/D-CN/CID/nullbin_tree", tree_no[k],"Code_D-CN.R> nullbin_tree", tree_no[k],"Code.out"), sep="\n")
         cat("", sep="\n")
         cat("# tar-up (archive) all output files to transfer them back to your space.", sep="\n")
         # variable line
-        cat("tar -zcvf $HOME/Scratch/Binary/CID/files_from_job_$JOB_ID.tgz $TMPDIR", sep="\n")
+        cat("tar -zcvf $HOME/Scratch/Binary/D-CN/CID/files_from_job_$JOB_ID.tgz $TMPDIR", sep="\n")
         cat("", sep="\n")
         # variable line
-        cat(paste0("cp nullbin_tree", tree_no[k],".RDS /lustre/scratch/scratch/ucbtmao/Binary/CID"), sep="\n")
+        cat(paste0("cp nullbin_tree", tree_no[k],"_D-CN.RDS /lustre/scratch/scratch/ucbtmao/Binary/D-CN/CID"), sep="\n")
     sink()
     close(f)
     
     # CID R file (the messy tab-alignment here makes the resulting file tidier)
-    sink(paste0("./Analyses/Binary/CID/nullbin_tree", tree_no[k],"Code.R"))
+    sink(paste0("./Analyses/Binary/D-CN/CID/nullbin_tree", tree_no[k],"Code_D-CN.R"))
         cat("# load required packages \n")
         cat('Packages <- c("hisse", "diversitree", "phytools")\n')
         cat("lapply(Packages, library, character.only = TRUE) \n\n")
         cat("# load data and tree \n")
         cat("act3 <- read.table(file=\"APdata_2400spp.txt\") \n")
-        cat("freq <- c(0.3523062, 0.4322946) \n")
+        cat("freq <- c(0.3714350, 0.4083013) \n") # c(0.3714350, 0.4083013) is correct for D-CN
         cat(paste0("tree <- read.tree(\"tree", tree_no[k],".nex\") \n\n")) # load one tree variant
         cat('# format data
 for (i in 1:length(tree$tip.label)){
@@ -400,8 +414,8 @@ for (i in 1:length(tree$tip.label)){
 } \n')
         cat('states <- data.frame(tree$tip.label, tree$tip.state)
 states_trans <- states
-states_trans[,2] <- states_trans[,2] - 1
-states_trans[which(states_trans[,2] > 0),2] <- 1 # lump C + D together \n\n')
+states_trans[which(states_trans[,2] < 3),2] <- 0
+states_trans[which(states_trans[,2] == 3),2] <- 1 \n\n')
         cat("# dull null \n") 
         cat("# div rates 
 turnover <- c(1,1)
@@ -414,15 +428,13 @@ tmp <- hisse(phy=tree, data=states_trans, f=freq,
                trans.rate=trans.rate.cid,
                hidden.states=FALSE, 
                sann = TRUE) \n\n')
-        cat(paste0("saveRDS(tmp, file=\"nullbin_tree", tree_no[k],".RDS\")"))
+        cat(paste0("saveRDS(tmp, file=\"nullbin_tree", tree_no[k],"_D-CN.RDS\")"))
     sink()
-}
-
-
+} # optional: close looping over tree numbers (to yield BiSSE and null models only)
 
 # 3. Make only VR files (between-states transition rates vary) ----------------
 
-for (n in 1:4){
+for (n in 1:5){
     
     #dir.create(file.path(paste0("./Analyses/Binary/HiSSE/vrHiSSE",n+1)))
     #dir.create(file.path(paste0("./Analyses/Binary/CID/bvrCID",n+1)))
@@ -433,7 +445,7 @@ for (n in 1:4){
     # this format is used to avoid the DOS (^M) end-of-line which trips the cluster. End-of-line DOS characters can be 
     # removed from a bash file by using dos2nix filename.sh in the command line (use cat -v filename.sh to see if those 
     # characters are there at all), but I want to automate it rather than repeating a manual command for every job submitted
-    {f <- file(paste0("./Analyses/Binary/HiSSE/vrHiSSE",n+1,"_MCCtree.sh"), open = "wb")
+    {f <- file(paste0("./Analyses/Binary/D-CN/HiSSE/vrHiSSE",n+1,"_MCCtree_D-CN.sh"), open = "wb")
     sink(file=f)
         cat("#!/bin/bash -l", sep="\n")
         cat("", sep="\n")
@@ -454,7 +466,7 @@ for (n in 1:4){
         cat("# This is a necessary step as compute nodes cannot write to $HOME.", sep="\n")
         cat("# NOTE: this directory must exist.", sep="\n")
         # variable line
-        cat("#$ -wd /lustre/scratch/scratch/ucbtmao/Binary/HiSSE", sep="\n")
+        cat("#$ -wd /lustre/scratch/scratch/ucbtmao/Binary/D-CN/HiSSE", sep="\n")
         cat("", sep="\n")
         cat("# Load the R module and run your R program", sep="\n")
         cat("module -f unload compilers mpi gcc-libs", sep="\n")
@@ -467,30 +479,30 @@ for (n in 1:4){
         # variable line
         cat("cp UltMCC_2400spp_3AP_5kvars.nex $TMPDIR", sep="\n")
         # variable line
-        cat(paste0("cp vrHiSSE",n+1,"_MCCtreeCode.R $TMPDIR"), sep="\n")
+        cat(paste0("cp vrHiSSE",n+1,"_MCCtreeCode_D-CN.R $TMPDIR"), sep="\n")
         cat("", sep="\n")
         cat("# Your work should be done in $TMPDIR", sep="\n")
         cat("cd $TMPDIR", sep="\n")
         cat("", sep="\n")
         # variable line
-        cat(paste0("/usr/bin/time --verbose R --no-save < /lustre/scratch/scratch/ucbtmao/Binary/HiSSE/vrHiSSE",n+1,"_MCCtreeCode.R> vrHiSSE",n+1,"_MCCtreeCode.out"), sep="\n")
+        cat(paste0("/usr/bin/time --verbose R --no-save < /lustre/scratch/scratch/ucbtmao/Binary/D-CN/HiSSE/vrHiSSE",n+1,"_MCCtreeCode_D-CN.R> vrHiSSE",n+1,"_MCCtreeCode.out"), sep="\n")
         cat("", sep="\n")
         cat("# tar-up (archive) all output files to transfer them back to your space.", sep="\n")
-        cat("tar -zcvf $HOME/Scratch/Binary/HiSSE/files_from_job_$JOB_ID.tgz $TMPDIR", sep="\n")
+        cat("tar -zcvf $HOME/Scratch/Binary/D-CN/HiSSE/files_from_job_$JOB_ID.tgz $TMPDIR", sep="\n")
         cat("", sep="\n")
         # variable line
-        cat(paste0("cp vrHiSSE",n+1,"_MCCtree.RDS /lustre/scratch/scratch/ucbtmao/Binary/HiSSE"), sep="\n")
+        cat(paste0("cp vrHiSSE",n+1,"_MCCtree_D-CN.RDS /lustre/scratch/scratch/ucbtmao/Binary/D-CN/HiSSE"), sep="\n")
     sink()
     close(f)
     
     # HiSSE R file (the messy tab-alignment here makes the resulting file tidier)
-    sink(paste0("./Analyses/Binary/HiSSE/vrHiSSE",n+1,"_MCCtreeCode.R"))
+    sink(paste0("./Analyses/Binary/D-CN/HiSSE/vrHiSSE",n+1,"_MCCtreeCode_D-CN.R"))
         cat("# load required packages \n")
         cat('Packages <- c("hisse", "diversitree", "phytools")\n')
         cat("lapply(Packages, library, character.only = TRUE) \n\n")
         cat("# load data and tree \n")
         cat("act3 <- read.table(file=\"APdata_2400spp.txt\") \n")
-        cat("freq <- c(0.3523062, 0.4322946) \n")
+        cat("freq <- c(0.3714350, 0.4083013) \n") # c(0.3714350, 0.4083013) is correct for D-CN
         cat(paste0("tree <- read.tree(\"UltMCC_2400spp_3AP_5kvars.nex\") \n\n"))
         cat('# format data
 for (i in 1:length(tree$tip.label)){
@@ -498,8 +510,8 @@ for (i in 1:length(tree$tip.label)){
 } \n')
         cat('states <- data.frame(tree$tip.label, tree$tip.state)
 states_trans <- states
-states_trans[,2] <- states_trans[,2] - 1
-states_trans[which(states_trans[,2] > 0),2] <- 1 # lump C + D together \n\n')
+states_trans[which(states_trans[,2] < 3),2] <- 0
+states_trans[which(states_trans[,2] == 3),2] <- 1 \n\n')
         cat("# HiSSE \n") 
         cat(paste0("n <- ", n+1, "\n")) # set the number of hidden states
         cat('# div rates 
@@ -515,12 +527,12 @@ tmp <- hisse(phy=tree, data=states_trans, f=freq,
                turnover.upper=1000, 
                sann = TRUE) \n')
     
-        cat(paste0("saveRDS(tmp, file=\"vrHiSSE",n+1,"_MCCtree.RDS\")"))
+        cat(paste0("saveRDS(tmp, file=\"vrHiSSE",n+1,"_MCCtree_D-CN.RDS\")"))
     sink()
     }
     
     # CID Shell file
-    f <- file(paste0("./Analyses/Binary/CID/bvrCID",n+1,"_MCCtree.sh"), open = "wb")
+    f <- file(paste0("./Analyses/Binary/D-CN/CID/bvrCID",n+1,"_MCCtree_D-CN.sh"), open = "wb")
     sink(file=f)
         cat("#!/bin/bash -l", sep="\n")
         cat("", sep="\n")
@@ -544,7 +556,7 @@ tmp <- hisse(phy=tree, data=states_trans, f=freq,
         cat("# This is a necessary step as compute nodes cannot write to $HOME.", sep="\n")
         cat("# NOTE: this directory must exist.", sep="\n")
         # variable line
-        cat("#$ -wd /lustre/scratch/scratch/ucbtmao/Binary/CID", sep="\n")
+        cat("#$ -wd /lustre/scratch/scratch/ucbtmao/Binary/D-CN/CID", sep="\n")
         cat("", sep="\n")
         cat("# Load the R module and run your R program", sep="\n")
         cat("module -f unload compilers mpi gcc-libs", sep="\n")
@@ -557,31 +569,31 @@ tmp <- hisse(phy=tree, data=states_trans, f=freq,
         # variable line
         cat("cp UltMCC_2400spp_3AP_5kvars.nex $TMPDIR", sep="\n")
         # variable line
-        cat(paste0("cp bvrCID",n+1,"_MCCtreeCode.R $TMPDIR"), sep="\n")
+        cat(paste0("cp bvrCID",n+1,"_MCCtreeCode_D-CN.R $TMPDIR"), sep="\n")
         cat("", sep="\n")
         cat("# Work should be done in $TMPDIR", sep="\n")
         cat("cd $TMPDIR", sep="\n")
         cat("", sep="\n")
         # variable line
-        cat(paste0("R --no-save < /lustre/scratch/scratch/ucbtmao/Binary/CID/bvrCID",n+1,"_MCCtreeCode.R> bvrCID",n+1,"_MCCtreeCode.out"), sep="\n")
+        cat(paste0("R --no-save < /lustre/scratch/scratch/ucbtmao/Binary/D-CN/CID/bvrCID",n+1,"_MCCtreeCode_D-CN.R> bvrCID",n+1,"_MCCtreeCode.out"), sep="\n")
         cat("", sep="\n")
         cat("# tar-up (archive) all output files to transfer them back to your space.", sep="\n")
         # variable line
-        cat("tar -zcvf $HOME/Scratch/Binary/CID/files_from_job_$JOB_ID.tgz $TMPDIR", sep="\n")
+        cat("tar -zcvf $HOME/Scratch/Binary/D-CN/CID/files_from_job_$JOB_ID.tgz $TMPDIR", sep="\n")
         cat("", sep="\n")
         # variable line
-        cat(paste0("cp bvrCID",n+1,"_MCCtree.RDS /lustre/scratch/scratch/ucbtmao/Binary/CID"), sep="\n")
+        cat(paste0("cp bvrCID",n+1,"_MCCtree_D-CN.RDS /lustre/scratch/scratch/ucbtmao/Binary/D-CN/CID"), sep="\n")
     sink()
     close(f)
     
     # CID R file (the messy tab-alignment here makes the resulting file tidier)
-    sink(paste0("./Analyses/Binary/CID/bvrCID",n+1,"_MCCtreeCode.R"))
+    sink(paste0("./Analyses/Binary/D-CN/CID/bvrCID",n+1,"_MCCtreeCode_D-CN.R"))
         cat("# load required packages \n")
         cat('Packages <- c("hisse", "diversitree", "phytools")\n')
         cat("lapply(Packages, library, character.only = TRUE) \n\n")
         cat("# load data and tree \n")
         cat("act3 <- read.table(file=\"APdata_2400spp.txt\") \n")
-        cat("freq <- c(0.3523062, 0.4322946) \n")
+        cat("freq <- c(0.3714350, 0.4083013) \n") # c(0.3714350, 0.4083013) is correct for D-CN
         cat(paste0("tree <- read.tree(\"UltMCC_2400spp_3AP_5kvars.nex\") \n\n"))
         cat('# format data
 for (i in 1:length(tree$tip.label)){
@@ -589,8 +601,8 @@ for (i in 1:length(tree$tip.label)){
 } \n')
         cat('states <- data.frame(tree$tip.label, tree$tip.state)
 states_trans <- states
-states_trans[,2] <- states_trans[,2] - 1
-states_trans[which(states_trans[,2] > 0),2] <- 1 # lump C + D together \n\n')
+states_trans[which(states_trans[,2] < 3),2] <- 0
+states_trans[which(states_trans[,2] == 3),2] <- 1 \n\n')
         cat("# bvrCID \n") 
         cat(paste0("n <- ", n+1, "\n")) # set the number of hidden states
         cat("# div rates 
@@ -606,15 +618,15 @@ tmp <- hisse(phy=tree, data=states_trans, f=freq,
                hidden.states=TRUE, 
                turnover.upper=1000, 
                sann = TRUE) \n\n')
-        cat(paste0("saveRDS(tmp, file=\"bvrCID",n+1,"_MCCtree.RDS\")"))
+        cat(paste0("saveRDS(tmp, file=\"bvrCID",n+1,"_MCCtree_D-CN.RDS\")"))
     sink()
 
     
-    # 3.2 Generate files for 12 tree variants ------------------------------------
+    # 3.2 Generate files for tree variants ------------------------------------
     
     for (k in 1:length(tree_no)){
         # HiSSE Shell file
-        f <- file(paste0("./Analyses/Binary/HiSSE/vrHiSSE",n+1,"_tree", tree_no[k],".sh"), open = "wb")
+        f <- file(paste0("./Analyses/Binary/D-CN/HiSSE/vrHiSSE",n+1,"_tree", tree_no[k],"_D-CN.sh"), open = "wb")
         sink(file=f)
             cat("#!/bin/bash -l", sep="\n")
             cat("", sep="\n")
@@ -635,7 +647,7 @@ tmp <- hisse(phy=tree, data=states_trans, f=freq,
             cat("# This is a necessary step as compute nodes cannot write to $HOME.", sep="\n")
             cat("# NOTE: this directory must exist.", sep="\n")
             # variable line
-            cat("#$ -wd /lustre/scratch/scratch/ucbtmao/Binary/HiSSE", sep="\n")
+            cat("#$ -wd /lustre/scratch/scratch/ucbtmao/Binary/D-CN/HiSSE", sep="\n")
             cat("", sep="\n")
             cat("# Load the R module and run your R program", sep="\n")
             cat("module -f unload compilers mpi gcc-libs", sep="\n")
@@ -648,30 +660,30 @@ tmp <- hisse(phy=tree, data=states_trans, f=freq,
             # variable line
             cat(paste0("cp tree", tree_no[k],".nex $TMPDIR"), sep="\n")
             # variable line
-            cat(paste0("cp vrHiSSE",n+1,"_tree", tree_no[k],"Code.R $TMPDIR"), sep="\n")
+            cat(paste0("cp vrHiSSE",n+1,"_tree", tree_no[k],"Code_D-CN.R $TMPDIR"), sep="\n")
             cat("", sep="\n")
             cat("# Your work should be done in $TMPDIR", sep="\n")
             cat("cd $TMPDIR", sep="\n")
             cat("", sep="\n")
             # variable line
-            cat(paste0("R --no-save < /lustre/scratch/scratch/ucbtmao/Binary/HiSSE/vrHiSSE",n+1,"_tree", tree_no[k],"Code.R> vrHiSSE",n+1,"_tree", tree_no[k],"Code.out"), sep="\n")
+            cat(paste0("R --no-save < /lustre/scratch/scratch/ucbtmao/Binary/D-CN/HiSSE/vrHiSSE",n+1,"_tree", tree_no[k],"Code_D-CN.R> vrHiSSE",n+1,"_tree", tree_no[k],"Code.out"), sep="\n")
             cat("", sep="\n")
             cat("# tar-up (archive) all output files to transfer them back to your space.", sep="\n")
-            cat("tar -zcvf $HOME/Scratch/Binary/HiSSE/files_from_job_$JOB_ID.tgz $TMPDIR", sep="\n")
+            cat("tar -zcvf $HOME/Scratch/Binary/D-CN/HiSSE/files_from_job_$JOB_ID.tgz $TMPDIR", sep="\n")
             cat("", sep="\n")
             # variable line
-            cat(paste0("cp vrHiSSE",n+1,"_tree", tree_no[k],".RDS /lustre/scratch/scratch/ucbtmao/Binary/HiSSE"), sep="\n")
+            cat(paste0("cp vrHiSSE",n+1,"_tree", tree_no[k],"_D-CN.RDS /lustre/scratch/scratch/ucbtmao/Binary/D-CN/HiSSE"), sep="\n")
         sink()
         close(f)
         
         # HiSSE R file  (the messy tab-alignment here makes the resulting file tidier)
-        sink(paste0("./Analyses/Binary/HiSSE/vrHiSSE",n+1,"_tree", tree_no[k],"Code.R"))
+        sink(paste0("./Analyses/Binary/D-CN/HiSSE/vrHiSSE",n+1,"_tree", tree_no[k],"Code_D-CN.R"))
             cat("# load required packages \n")
             cat('Packages <- c("hisse", "diversitree", "phytools")\n')
             cat("lapply(Packages, library, character.only = TRUE) \n\n")
             cat("# load data and tree \n")
             cat("act3 <- read.table(file=\"APdata_2400spp.txt\") \n")
-            cat("freq <- c(0.3523062, 0.4322946) \n")
+            cat("freq <- c(0.3714350, 0.4083013) \n") # c(0.3714350, 0.4083013) is correct for D-CN
             cat(paste0("tree <- read.tree(\"tree", tree_no[k],".nex\") \n\n")) # load one tree variant
             cat('# format data
 for (i in 1:length(tree$tip.label)){
@@ -679,8 +691,8 @@ for (i in 1:length(tree$tip.label)){
 } \n')
             cat('states <- data.frame(tree$tip.label, tree$tip.state)
 states_trans <- states
-states_trans[,2] <- states_trans[,2] - 1
-states_trans[which(states_trans[,2] > 0),2] <- 1 # lump C + D together \n\n')
+states_trans[which(states_trans[,2] < 3),2] <- 0
+states_trans[which(states_trans[,2] == 3),2] <- 1 \n\n')
             cat("# vrHiSSE \n") 
             cat(paste0("n <- ", n+1, "\n")) # set the number of hidden states
             cat('# div rates 
@@ -697,12 +709,12 @@ tmp <- hisse(phy=tree, data=states_trans, f=freq,
                turnover.upper=1000, 
                sann = TRUE) \n')
         
-            cat(paste0("saveRDS(tmp, file=\"vrHiSSE",n+1,"_tree", tree_no[k],".RDS\")"))
+            cat(paste0("saveRDS(tmp, file=\"vrHiSSE",n+1,"_tree", tree_no[k],"_D-CN.RDS\")"))
         sink()
         
         
         # CID Shell file
-        f <- file(paste0("./Analyses/Binary/CID/bvrCID",n+1,"_tree", tree_no[k],".sh"), open = "wb")
+        f <- file(paste0("./Analyses/Binary/D-CN/CID/bvrCID",n+1,"_tree", tree_no[k],"_D-CN.sh"), open = "wb")
         sink(file=f)
             cat("#!/bin/bash -l", sep="\n")
             cat("", sep="\n")
@@ -723,7 +735,7 @@ tmp <- hisse(phy=tree, data=states_trans, f=freq,
             cat("# This is a necessary step as compute nodes cannot write to $HOME.", sep="\n")
             cat("# NOTE: this directory must exist.", sep="\n")
             # variable line
-            cat("#$ -wd /lustre/scratch/scratch/ucbtmao/Binary/CID", sep="\n")
+            cat("#$ -wd /lustre/scratch/scratch/ucbtmao/Binary/D-CN/CID", sep="\n")
             cat("", sep="\n")
             cat("# Load the R module and run your R program", sep="\n")
             cat("module -f unload compilers mpi gcc-libs", sep="\n")
@@ -736,30 +748,30 @@ tmp <- hisse(phy=tree, data=states_trans, f=freq,
             # variable line
             cat(paste0("cp tree", tree_no[k],".nex $TMPDIR"), sep="\n")
             # variable line
-            cat(paste0("cp bvrCID",n+1,"_tree", tree_no[k],"Code.R $TMPDIR"), sep="\n")
+            cat(paste0("cp bvrCID",n+1,"_tree", tree_no[k],"Code_D-CN.R $TMPDIR"), sep="\n")
             cat("", sep="\n")
             cat("# Work should be done in $TMPDIR", sep="\n")
             cat("cd $TMPDIR", sep="\n")
             cat("", sep="\n")
             # variable line
-            cat(paste0("R --no-save < /lustre/scratch/scratch/ucbtmao/Binary/CID/bvrCID",n+1,"_tree", tree_no[k],"Code.R> bvrCID",n+1,"_tree", tree_no[k],"Code.out"), sep="\n")
+            cat(paste0("R --no-save < /lustre/scratch/scratch/ucbtmao/Binary/D-CN/CID/bvrCID",n+1,"_tree", tree_no[k],"Code_D-CN.R> bvrCID",n+1,"_tree", tree_no[k],"Code.out"), sep="\n")
             cat("", sep="\n")
             cat("# tar-up (archive) all output files to transfer them back to your space.", sep="\n")
-            cat("tar -zcvf $HOME/Scratch/Binary/CID/files_from_job_$JOB_ID.tgz $TMPDIR", sep="\n")
+            cat("tar -zcvf $HOME/Scratch/Binary/D-CN/CID/files_from_job_$JOB_ID.tgz $TMPDIR", sep="\n")
             cat("", sep="\n")
             # variable line
-            cat(paste0("cp bvrCID",n+1,"_tree", tree_no[k],".RDS /lustre/scratch/scratch/ucbtmao/Binary/CID"), sep="\n")
+            cat(paste0("cp bvrCID",n+1,"_tree", tree_no[k],"_D-CN.RDS /lustre/scratch/scratch/ucbtmao/Binary/D-CN/CID"), sep="\n")
         sink()
         close(f)
         
         # CID R file (the messy tab-alignment here makes the resulting file tidier)
-        sink(paste0("./Analyses/Binary/CID/bvrCID",n+1,"_tree", tree_no[k],"Code.R"))
+        sink(paste0("./Analyses/Binary/D-CN/CID/bvrCID",n+1,"_tree", tree_no[k],"Code_D-CN.R"))
             cat("# load required packages \n")
             cat('Packages <- c("hisse", "diversitree", "phytools")\n')
             cat("lapply(Packages, library, character.only = TRUE) \n\n")
             cat("# load data and tree \n")
             cat("act3 <- read.table(file=\"APdata_2400spp.txt\") \n")
-            cat("freq <- c(0.3523062, 0.4322946) \n")
+            cat("freq <- c(0.3714350, 0.4083013) \n") # c(0.3714350, 0.4083013) is correct for D-CN
             cat(paste0("tree <- read.tree(\"tree", tree_no[k],".nex\") \n\n")) # load one tree variant
             cat('# format data
 for (i in 1:length(tree$tip.label)){
@@ -767,8 +779,8 @@ for (i in 1:length(tree$tip.label)){
 } \n')
             cat('states <- data.frame(tree$tip.label, tree$tip.state)
 states_trans <- states
-states_trans[,2] <- states_trans[,2] - 1
-states_trans[which(states_trans[,2] > 0),2] <- 1 # lump C + D together \n\n')
+states_trans[which(states_trans[,2] < 3),2] <- 0
+states_trans[which(states_trans[,2] == 3),2] <- 1 \n\n')
             cat("# bvrCID \n") 
             cat(paste0("n <- ", n+1, "\n")) # set the number of hidden states
             cat("# div rates 
@@ -784,7 +796,7 @@ tmp <- hisse(phy=tree, data=states_trans, f=freq,
                hidden.states=TRUE, 
                turnover.upper=1000, 
                sann = TRUE) \n\n')
-            cat(paste0("saveRDS(tmp, file=\"bvrCID",n+1,"_tree", tree_no[k],".RDS\")"))
+            cat(paste0("saveRDS(tmp, file=\"bvrCID",n+1,"_tree", tree_no[k],"_D-CN.RDS\")"))
         sink()
     }
 } 
