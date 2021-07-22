@@ -99,20 +99,19 @@ ordbytB<- ordbyt[order(ordbyt$tree, ordbyt$BIC),]
 
 # * Summarise support (plots) ----------------------------------------------------------
 
-setwd("C:/Users/Roi Maor/Desktop/2nd Chapter/DivRates/MuHiSSE")
+setwd("C:/Users/Roi Maor/Desktop/2nd Chapter/DivRates/MuHiSSE/Output")
 #write.csv(score, file="score.csv", row.names = FALSE)
 #write.csv(ordbyt, file="Model fit by tree.csv")
 
 ## plotting likelihood as function of tree variant and model type
 
 # comparing all models by BIC, divided to model type and no. of states, grouped by tree
-pdf(file="Model support by states_MCC marked.pdf", width = 10, height = 8)
+pdf(file="Model support ordered_MCC marked.pdf", width = 10, height = 8)
 df1 <- tert[tert$states != 1,]
 df2 <- subset(df1, df1$tree =="MCC")    # get only MCC models separately
 #par(mfrow=c(2,1))
 ggplot(df1, aes(x = reorder(tree, AICc, FUN = min), y = AICc, colour = as.factor(states))) +
     geom_point(alpha= .5, size = 2.5) + 
-    #geom_point(data = df2, colour = 'white', shape = 3, size = 2) + 
     geom_point(data = df2, aes(tree, AICc), colour = 'red', shape = 1, size = 3) + 
     facet_wrap(~type) + 
     theme_light() +
@@ -122,17 +121,16 @@ ggplot(df1, aes(x = reorder(tree, AICc, FUN = min), y = AICc, colour = as.factor
 
 ggplot(df1, aes(x = reorder(tree, BIC, FUN = min), y = BIC, colour = as.factor(states))) +
     geom_point(alpha= .5, size = 2.5) + 
-    #geom_point(data = df2, colour = 'white', shape = 3, size = 2) + 
     geom_point(data = df2, aes(tree, BIC), colour = 'red', shape = 1, size = 3) + 
     facet_wrap(~type) + 
     theme_light() +
     theme(axis.text.x = element_text(angle = 80, vjust = 1, hjust = 1)) +
     labs(color = "States") +
-    scale_color_viridis_d(option = "inferno", begin = 0, end = .9)#
+    scale_color_viridis_d(option = "inferno", begin = 0, end = .9)
 dev.off()
 
 df3 <- tert[tert$states == 1,]
-pdf(file = "Model support by model type.pdf",width = 10, height = 10)  #png(file = "likelihood by model type.png",width = 7, height = 8.5, units = "in", res=800)
+pdf(file = "Model support unordered.pdf",width = 10, height = 10)  #png(file = "likelihood by model type.png",width = 7, height = 8.5, units = "in", res=800)
 ggplot(tert) +
     geom_point(aes(x=tree, AICc, colour = as.factor(states)), alpha= .8, size = 2) + # use: "reorder(tree, -loglik, FUN = mean)" instead of "tree" to order trees by loglik
     geom_point(data = df3, aes(tree, AICc), colour = 'grey20', shape = 1, size = 2) + 
@@ -152,86 +150,175 @@ ggplot(tert) +
     scale_color_viridis_d(option = "inferno", begin = .1, end = .9, direction = -1)
 dev.off()
 
-pdf(file = "Model support by no. of states.pdf", width = 7, height = 8.5)
+#pdf(file = "Model support by no. of states.pdf", width = 7, height = 8.5)
+#library(ggridges)
+
 ## code for this figure adapted from: https://ourcodingclub.github.io/tutorials/dataviz-beautification-synthesis/#distributions 
 # This code loads the function in the working environment
 source("https://gist.githubusercontent.com/benmarwick/2a1bb0133ff568cbe28d/raw/fb53bd97121f7f9ce947837ef1a4c65a73bffb3f/geom_flat_violin.R")
+# theme from: https://neuroconscience.wordpress.com/2018/03/15/introducing-raincloud-plots/
+theme_niwot <- function(){
+    theme_bw() +
+        theme(text = element_text(family = "Helvetica Light"),
+              axis.text = element_text(size = 16),
+              axis.title = element_text(size = 18),
+              axis.line.x = element_line(color="black"),
+              axis.line.y = element_line(color="black"),
+              panel.border = element_blank(),
+              panel.grid.major.x = element_blank(),
+              panel.grid.minor.x = element_blank(),
+              panel.grid.minor.y = element_blank(),
+              panel.grid.major.y = element_blank(),
+              plot.margin = unit(c(1, 1, 1, 1), units = , "cm"),
+              plot.title = element_text(size = 18, vjust = 1, hjust = 0),
+              legend.text = element_text(size = 12),
+              legend.title = element_blank(),
+              legend.position = c(0.95, 0.15),
+              legend.key = element_blank(),
+              legend.background = element_rect(color = "black",
+                                               fill = "transparent",
+                                               size = 2, linetype = "blank"))
+}
+    
+raincloud_theme = theme(
+    text = element_text(size = 10),
+    axis.title.x = element_text(size = 16),
+    axis.title.y = element_text(size = 16),
+    axis.text = element_text(size = 14),
+    axis.text.x = element_text(angle = 45, vjust = 0.5),
+    legend.title=element_text(size=16),
+    legend.text=element_text(size=16),
+    legend.position = "right",
+    plot.title = element_text(lineheight=.8, face="bold", size = 16),
+    panel.border = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.grid.major = element_blank(),
+    axis.line.x = element_line(colour = 'black', size=0.5, linetype='solid'),
+    axis.line.y = element_line(colour = 'black', size=0.5, linetype='solid'))
 
 vars <- tert[-which(tert$tree == "MCC"),]
-vrci <- vars[which(vars$type == "vrCID"),]
-vrsse <- vars[(which(vars$type == "vrMuHiSSE")),]
+vr <- vars[which(vars$type %in% c("vrCID", "vrMuHiSSE")),]
+vr <- vr[-which(vr$states == 6),]
 
-library(ggridges)
-ggplot(vrsse, aes(x = as.factor(states), y = BIC, fill = as.factor(states))) +
+#vrci <- vars[which(vars$type == "vrCID"),]
+#vrsse <- vars[(which(vars$type == "vrMuHiSSE")),]
+#
+#ggplot(vrsse, aes(x = as.factor(states), y = BIC, fill = as.factor(states))) +
+#    #geom_flat_violin(position = position_nudge(x = .2, y = 0), alpha = .8) +
+#    geom_boxplot(width = .3, outlier.shape = NA, alpha = 0.7) +
+#    geom_point(aes(y = BIC), colour = 'grey30', position = position_jitter(width = .1), shape = 21, size = 2, alpha = 0.8) +
+#    #theme_light() +
+#    scale_fill_manual(values = c("#5A4A6F", "#E47250",  "#EBB261", "#9D5A6C")) +
+#    scale_colour_manual(values = c("#5A4A6F", "#E47250",  "#EBB261", "#9D5A6C")) +
+#    labs(y = "BIC", x = "States") +
+#    # Removing legends
+#    guides(fill = FALSE, color = FALSE) 
+#
+#ggplot(vrci, aes(x = as.factor(states), y = BIC, fill = as.factor(states))) +
+#    #geom_flat_violin(position = position_nudge(x = .2, y = 0), alpha = .8) +
+#    geom_boxplot(width = .3, outlier.shape = NA, alpha = 0.7) +
+#    geom_point(aes(y = BIC), colour = 'grey30', position = position_jitter(width = .1), shape = 21, size = 2, alpha = 0.8) +
+#    theme_light() + 
+#    scale_fill_viridis_d(begin = .3, end = .9, direction = -1, alpha=0.8) +
+#    labs(y = "BIC", x = "States") +
+#    # Removing legends
+#    guides(fill = FALSE, color = FALSE) +
+#    # Setting the limits of the y axis
+#    scale_y_continuous(limits = c(17400, 18600)) +
+#    # Picking nicer colours
+#    scale_fill_manual(values = c("#5A4A6F", "#E47250",  "#EBB261", "#9D5A6C","2CD11E")) +
+#    scale_colour_manual(values = c("#5A4A6F", "#E47250",  "#EBB261", "#9D5A6C","2CD11E")) 
+   
+# plotting support by no. states, aggregaetd over all variants
+pdf(file = "Model support VR aggregated.pdf", width = 8.5, height = 6)
+ggplot(data = vr, aes(y = AICc, x = as.factor(states), fill = as.factor(states))) +
     geom_flat_violin(position = position_nudge(x = .2, y = 0), alpha = .8) +
-    geom_boxplot(width = .3, outlier.shape = NA, alpha = 0.7) +
-    geom_point(aes(y = BIC), colour = 'grey30', position = position_jitter(width = .1), shape = 21, size = 2, alpha = 0.8) +
-    #theme_light() +
-    scale_fill_manual(values = c("#5A4A6F", "#E47250",  "#EBB261", "#9D5A6C")) +
-    scale_colour_manual(values = c("#5A4A6F", "#E47250",  "#EBB261", "#9D5A6C")) +
-    labs(y = "BIC", x = "States") +
-    # Removing legends
-    guides(fill = FALSE, color = FALSE) 
+    geom_boxplot(width = .15, outlier.shape = NA, alpha = 0.5) +
+    geom_point(aes(y = AICc, x = as.factor(states), color = as.factor(states)), 
+               position = position_jitter(width = .1), size = 2, alpha = 0.6) +
+    #labs(color = "States", fill = "States") +
+    xlab("No. of states") +
+    facet_wrap(~type,) +
+    expand_limits(x = 5.25) +
+    guides(fill = FALSE, color = FALSE) + # don't show a legend
+    #scale_color_brewer(palette = "Spectral") +
+    #scale_fill_brewer(palette = "Spectral") +
+    scale_fill_viridis_d(option = "viridis", begin = .3, end = .9, alpha=0.8, direction = -1) +
+    scale_color_viridis_d(option = "viridis", begin = .3, end = .9, alpha=0.8, direction = -1) +
+    #scale_fill_manual(values = c("#5A4A6F", "#E47250",  "#EBB261", "#9D5A6E")) +
+    #scale_colour_manual(values = c("#5A4A6F", "#E47250",  "#EBB261", "#9D5A6E")) +
+    theme_minimal() 
 
-
-ggplot(vrci, aes(x = as.factor(states), y = BIC, fill = as.factor(states))) +
+ggplot(data = vr, aes(y = BIC, x = as.factor(states), fill = as.factor(states))) +
     geom_flat_violin(position = position_nudge(x = .2, y = 0), alpha = .8) +
-    geom_boxplot(width = .3, outlier.shape = NA, alpha = 0.7) +
-    geom_point(aes(y = BIC), colour = 'grey30', position = position_jitter(width = .1), shape = 21, size = 2, alpha = 0.8) +
-    theme_light() + 
-    scale_fill_viridis_d(begin = .3, end = .9, direction = -1, alpha=0.8) +
-    labs(y = "BIC", x = "States") +
-    # Removing legends
-    guides(fill = FALSE, color = FALSE) +
-    # Setting the limits of the y axis
-    scale_y_continuous(limits = c(17400, 18600))# +
-    # Picking nicer colours
-    #scale_fill_manual(values = c("#5A4A6F", "#E47250",  "#EBB261", "#9D5A6C")) +
-    #scale_colour_manual(values = c("#5A4A6F", "#E47250",  "#EBB261", "#9D5A6C"))
-    
-ggplot(tert) +
-    geom_point(aes(x=states, AICc, colour = reorder(tree, AICc, FUN = mean)), alpha= .5, size = 2) + # use: "reorder(tree, -loglik, FUN = mean)" instead of "tree" to order trees by loglik
-    geom_point(data = tert[tert$tree == "MCC",], aes(states, AICc), colour = 'grey20', shape = 3, size = 2) + 
+    geom_boxplot(width = .15, outlier.shape = NA, alpha = 0.5) +
+    geom_point(aes(y = BIC, x = as.factor(states), color = as.factor(states)), 
+               position = position_jitter(width = .1), size = 2, alpha = 0.6) +
+    #labs(color = "States", fill = "States") +
+    xlab("No. of states") +
+    facet_wrap(~type,) +
+    expand_limits(x = 5.25) +
+    guides(fill = FALSE, color = FALSE) + # don't show a legend
+    #scale_color_brewer(palette = "Spectral") +
+    #scale_fill_brewer(palette = "Spectral") +
+    scale_fill_viridis_d(option = "viridis", begin = .3, end = .9, alpha=0.8, direction = -1) +
+    scale_color_viridis_d(option = "viridis", begin = .3, end = .9, alpha=0.8, direction = -1) +
+    #scale_fill_manual(values = c("#5A4A6F", "#E47250",  "#EBB261", "#9D5A6E")) + #, "2CD11E")) +
+    #scale_colour_manual(values = c("#5A4A6F", "#E47250",  "#EBB261", "#9D5A6E")) + #, "2CD11E")) +
+    theme_minimal() 
+dev.off()
+
+# plotting support by no. states with trendlines to show that the pattern is uniform accross trees
+pdf(file = "Model support by states_tree-trendlines.pdf", width = 7, height = 8.5)
+ggplot(vars,aes(x=states, AICc, colour = reorder(tree, AICc, FUN = mean), group = tree)) +
+    geom_point(alpha= .5, size = 2) +
+    # use the below if need to plot MCC along with tree variants
+    #geom_point(data = tert[tert$tree == "MCC",], aes(states, AICc), colour = 'grey10', shape = 4, size = 2) + 
+    geom_line() +
     theme(axis.text.x = element_text(angle = 80, vjust = 1, hjust = 1)) +
     labs(color = "Tree variant") +
     facet_wrap(~type,) + 
-    scale_color_viridis_d(option = "turbo", alpha = .9, begin = 0, end = .9, direction = -1)
+    scale_color_viridis_d(option = "turbo", alpha = .5, direction = -1)
 
-ggplot(tert) +
-    geom_point(aes(x=states, BIC, colour = reorder(tree, BIC, FUN = mean)), alpha= .5, size = 2) + # use: "reorder(tree, -loglik, FUN = mean)" instead of "tree" to order trees by loglik
-    geom_point(data = tert[tert$tree == "MCC",], aes(states, BIC), colour = 'grey20', shape = 3, size = 2) + 
+ggplot(vars,aes(x=states, BIC, colour = reorder(tree, BIC, FUN = mean), group = tree)) +
+    geom_point(alpha= .5, size = 2) +
+    # use the below if need to plot MCC along with tree variants
+    #geom_point(data = tert[tert$tree == "MCC",], aes(states, BIC), colour = 'grey10', shape = 4, size = 2) + 
+    geom_line() +
     theme(axis.text.x = element_text(angle = 80, vjust = 1, hjust = 1)) +
     labs(color = "Tree variant") +
-    facet_wrap(~type,) #+ 
-    scale_color_viridis_d(option = "inferno", alpha = .9, begin = 0, end = .9, direction = -1)
+    facet_wrap(~type,) + 
+    scale_color_viridis_d(option = "turbo", alpha = .5, direction = -1)
 dev.off()
 
 # comparing likelihood of all models, divided to model type and no. of states, grouped by tree
-pdf(file="likelihood by states_MCC marked.pdf", width = 10, height = 8)
-df1 <- tert[tert$states != 1,]
-df2 <- subset(df1, df1$tree =="MCC")    # get only MCC models separately
-
-ggplot(df1, aes(x = reorder(tree, loglik, FUN = max), y = loglik, colour = as.factor(states))) +
-    geom_point(alpha= .8, size = 2.5) + 
-    #geom_point(data = df2, colour = 'white', shape = 3, size = 2) + 
-    geom_point(data = df2, aes(tree, loglik), colour = 'red', shape = 1, size = 3) + 
-    facet_wrap(~type) + 
-    theme_light() +
-    theme(axis.text.x = element_text(angle = 80, vjust = 1, hjust = 1)) +
-    labs(color = "States") +
-    scale_color_viridis_d(option = "viridis", begin = 0, end = .9, direction = -1)
-dev.off()
+#pdf(file="likelihood by states_MCC marked.pdf", width = 10, height = 8)
+#df1 <- tert[tert$states != 1,]
+#df2 <- subset(df1, df1$tree =="MCC")    # get only MCC models separately
+#
+#ggplot(df1, aes(x = reorder(tree, loglik, FUN = max), y = loglik, colour = as.factor(states))) +
+#    geom_point(alpha= .8, size = 2.5) + 
+#    #geom_point(data = df2, colour = 'white', shape = 3, size = 2) + 
+#    geom_point(data = df2, aes(tree, loglik), colour = 'red', shape = 1, size = 3) + 
+#    facet_wrap(~type) + 
+#    theme_light() +
+#    theme(axis.text.x = element_text(angle = 80, vjust = 1, hjust = 1)) +
+#    labs(color = "States") +
+#    scale_color_viridis_d(option = "viridis", begin = 0, end = .9, direction = -1)
+#dev.off()
 
 # comparing model type performance
-pdf(file="model type performance.pdf", width = 10, height = 8)
-ggplot(ordbytA) +
-    geom_point(aes(x=states, AICc, colour = type), alpha= .5, size = 3) +  
+pdf(file="model type performance by tree.pdf", width = 10, height = 8)
+ggplot(ordbytA, aes(x=states, AICc, colour = type, group=type)) +
+    geom_point(alpha= .5, size = 3) + 
+    geom_line(size = 1.5, alpha = 0.5) +
     theme_light() +
     facet_wrap(~tree, nrow = 5) + 
-    scale_color_viridis_d(option = "viridis", #inferno, turbo, mako
-                          begin = 0, end = .9, direction = -1)
-ggplot(ordbytB) +
-    geom_point(aes(x=states, BIC, colour = type), alpha= .5, size = 3) +  
+    scale_color_viridis_d(option = "inferno", #inferno, turbo, mako
+                          begin = 0, end = .8, direction = -1)
+ggplot(ordbytB, aes(x=states, BIC, colour = type, group=type)) +
+    geom_point(alpha= .5, size = 3) +  
+    geom_line(size = 1.5, alpha = 0.5) +
     theme_light() +
     facet_wrap(~tree, nrow = 5) + 
     scale_color_viridis_d(option = "inferno", #inferno, turbo, mako
@@ -259,7 +346,7 @@ params <- pardat[which(is.na(str_extract(names(pardat), ".10.")))]      # remove
 params <- params[which(is.na(str_extract(names(params), ".00..11.|.11..00.")))]  # remove 'diagonal' change (disabled in all)
 
 
-# 2.1 calculate s and mu from composite rates ----------------------------
+## 2.1 calculate s and mu from composite rates --------------------------------
 
 #   reminder: turnover = spec+ext; netDiv = spec-ext; extFrac = ext/spec 
 #   symbols: turnover-tau; extFrac-eps; spec_rate-s; ext_rate-mu; netDiv-lambda;
@@ -288,8 +375,11 @@ for (i in colnames(params)) {
         colnames(div)[which(colnames(div) == i)] <- paste0("mu",index)
     }
 }
-setwd("C:/Users/Roi Maor/Desktop/2nd Chapter/DivRates/MuHiSSE")
+setwd("C:/Users/Roi Maor/Desktop/2nd Chapter/DivRates/MuHiSSE/Output")
 #write.csv(div, file="Rates of Evolution.csv", row.names = TRUE)
+
+
+## 2.2 Parameter estimates from averaging supported models --------------------
 
 # combine fit and params estimates to one table
 results <- ordbytB
@@ -302,35 +392,90 @@ for (i in 1:nrow(ordbytB)) {
 #write.csv(results, file = "Model estimates exploratory.csv")
 
 
-# 2.2 Parameter estimates for leading models ----------------------------------
+### 2.2.1 Calculate diversification rates (lambda) ----------------------------
 
-# take all supported models
+# take all BIC supported models (start from the previous step to repeat this process for AIC)
 leading <- results[which(rownames(results) %in% rownames(ordbytB)[which(ordbytB$diff_BIC < 6)]),]
 #leading <- leading[order(leading$states),]
 # calculate trait-dependent netDiv values per state
-for (states in 1:5) {
+for (state in 1:max(leading$states)) {
     for (patt in c("00","01","11")) {
-        s_rate <- paste0("s",patt,LETTERS[states])
-        mu_rate <- paste0("mu",patt,LETTERS[states])
+        s_rate <- paste0("s", patt, LETTERS[state])
+        mu_rate <- paste0("mu", patt, LETTERS[state])
+        # claculate diversification rate
         leading$new <- leading[,which(colnames(leading) == s_rate)] - leading[,which(colnames(leading) == mu_rate)]
-        if (states == 5) {
-            leading$new[which(leading$new == 0)] <- NA
+        # ensure that rates not in the model are marked NA instead of 0 (to exclude them from downstream calculations)
+        if (state > min(leading$states)) { 
+            leading$new[which(leading$states < state)] <- NA
         }
-    colnames(leading)[ncol(leading)] <- paste0("lambda",patt,LETTERS[states])
+    # rename new column    
+    colnames(leading)[ncol(leading)] <- paste0("lambda", patt, LETTERS[state])
     }
 }
 
-means <- colMeans(leading[-which(leading$tree == "MCC"),10:ncol(leading)])
-means <- c(rep(NA, 9), means)
-leading <- rbind(leading, means)
-rownames(leading)[which(is.na(leading$tree))] <- "mean_24trees"
+
+### 2.2.2 model averaging -----------------------------------------------------
+## I did not average separately competing models for the same tree variant because the sometimes indicate different 
+## number of parameters, not just different estimated values. 
+
+# weight estimated values by model support for all tree variants (not for MCC)
+mod_avg <- leading
+for (i in 1:length(which(mod_avg$tree != "MCC"))) {
+    mod_avg[i,12:ncol(mod_avg)] <- mod_avg$weight[i] * mod_avg[i,12:ncol(mod_avg)]
+} 
+
+means <- colSums(mod_avg[which(mod_avg$tree != "MCC"),12:ncol(mod_avg)]) / 24 # mean rates
+means <- c(rep(NA, 11), means)
+mod_avg <- rbind(mod_avg, means)
+rownames(mod_avg)[which(is.na(mod_avg$tree))] <- "averaged_24trees"
 # remove rates not considered in the model (states F, G, H)
-leading <- leading[which(is.na(str_extract(colnames(leading), "..F|..G|..H")))]  
-#write.csv(leading, file="Best supported models.csv")
+mod_avg <- mod_avg[which(is.na(str_extract(colnames(mod_avg), "..E|..F|..G|..H")))]  
+#write.csv(mod_avg, file="Best supported models.csv")
 
 
-#
-#
+## summary of estimated rates
+library(data.table)
+div_rate <- as.data.table(mod_avg[,-c(1:4,6:11)])
+mods <- NA
+for (i in 1:nrow(mod_avg)){mods <- c(mods, strsplit(rownames(mod_avg)[i],"[.]")[[1]][1])}
+#names(mods) <- "model"
+div_rate <- cbind(mods[-which(is.na(mods))], div_rate)
+colnames(div_rate)[1] <- "model"
+# convert to long form 
+rates <- melt(div_rate, id.vars = c("model","npar"), measure.vars = colnames(div_rate)[3:ncol(div_rate)], variable.name = "rate")
+# aggregate rates over states by removing state name (capital letter) from rate name
+#colnames(div_rate) <- str_sub(colnames(div_rate),1, nchar(colnames(div_rate))-1)
+
+
+ggplot(data = div_rate, aes(x = "lambda11A")) +
+    #geom_flat_violin(position = position_nudge(x = .2, y = 0), alpha = .8) +
+    geom_boxplot(width = .15, outlier.shape = NA, alpha = 0.5) +
+    #geom_point(aes(y = BIC, x = as.factor(states), color = as.factor(states)), 
+    geom_point(position = position_jitter(width = .1), size = 2, alpha = 0.6) +
+    #labs(color = "States", fill = "States") +
+    #xlab("No. of states") +
+    #facet_wrap(~type,) +
+    expand_limits(x = 5.25) +
+    guides(fill = FALSE, color = FALSE) + # don't show a legend
+    #scale_color_brewer(palette = "Spectral") +
+    #scale_fill_brewer(palette = "Spectral") +
+    scale_fill_viridis_d(option = "viridis", begin = .3, end = .9, alpha=0.8, direction = -1) +
+    scale_color_viridis_d(option = "viridis", begin = .3, end = .9, alpha=0.8, direction = -1) +
+    #scale_fill_manual(values = c("#5A4A6F", "#E47250",  "#EBB261", "#9D5A6E")) + #, "2CD11E")) +
+    #scale_colour_manual(values = c("#5A4A6F", "#E47250",  "#EBB261", "#9D5A6E")) + #, "2CD11E")) +
+    theme_minimal() 
+
+
+ggplot(leading, aes(x = as.factor(states), y = BIC, fill = as.factor(states))) +
+    #geom_flat_violin(position = position_nudge(x = .2, y = 0), alpha = .8) +
+    geom_boxplot(width = .3, outlier.shape = NA, alpha = 0.7) +
+    geom_point(aes(y = BIC), colour = 'grey30', position = position_jitter(width = .1), shape = 21, size = 2, alpha = 0.8) +
+    #theme_light() +
+    scale_fill_manual(values = c("#5A4A6F", "#E47250",  "#EBB261", "#9D5A6C")) +
+    scale_colour_manual(values = c("#5A4A6F", "#E47250",  "#EBB261", "#9D5A6C")) +
+    labs(y = "BIC", x = "States") +
+    # Removing legends
+    guides(fill = FALSE, color = FALSE) 
 
 # 3. Follow up analyses -------------------------------------------------------
 
