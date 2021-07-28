@@ -1,7 +1,7 @@
 ### Processing output from MuHiSSE models (run on cluster)
 
 library("tidyverse")
-library("hisse")
+#library("hisse")
 
 #* Function definitions ------------------------------------------------------
 
@@ -91,7 +91,7 @@ for (z in unique(ordB$tree)) {
     dat <- dat[order(dat$BIC),]
     dat$diff_BIC <- dat$BIC - min(dat$BIC)
     dat$rel_lik <- exp(-0.5 * dat$diff_BIC)
-    dat$weight <- dat$rel_lik / sum(dat$rel_lik) # this is identical to rel_lik on most trees
+    dat$weight <- dat$rel_lik / sum(dat$rel_lik)
     ordbyt <- rbind(ordbyt, dat[order(dat$diff_BIC, decreasing = FALSE),])
 }
 ordbytB<- ordbyt[order(ordbyt$tree, ordbyt$BIC),]
@@ -376,10 +376,10 @@ for (i in colnames(params)) {
     }
 }
 setwd("C:/Users/Roi Maor/Desktop/2nd Chapter/DivRates/MuHiSSE/Output")
-#write.csv(div, file="Rates of Evolution.csv", row.names = TRUE)
+#write.csv(div, file="Raw Rates of Evolution.csv", row.names = TRUE)
 
 
-## 2.2 Parameter estimates from averaging supported models --------------------
+## 2.2 Obtain parameter estimates from averaging supported models -------------
 
 # combine fit and params estimates to one table
 results <- ordbytB
@@ -424,18 +424,93 @@ for (i in 1:length(which(mod_avg$tree != "MCC"))) {
     mod_avg[i,12:ncol(mod_avg)] <- mod_avg$weight[i] * mod_avg[i,12:ncol(mod_avg)]
 } 
 
-means <- colSums(mod_avg[which(mod_avg$tree != "MCC"),12:ncol(mod_avg)]) / 24 # mean rates
-means <- c(rep(NA, 11), means)
-mod_avg <- rbind(mod_avg, means)
-rownames(mod_avg)[which(is.na(mod_avg$tree))] <- "averaged_24trees"
-# remove rates not considered in the model (states F, G, H)
-mod_avg <- mod_avg[which(is.na(str_extract(colnames(mod_avg), "..E|..F|..G|..H")))]  
+## ** this averaging is likely wrong so commented out
+#means <- colSums(mod_avg[which(mod_avg$tree != "MCC"),12:ncol(mod_avg)]) / 24 # mean rates
+#means <- c(rep(NA, 11), means)
+#mod_avg <- rbind(mod_avg, means)
+#rownames(mod_avg)[which(is.na(mod_avg$tree))] <- "averaged_24trees"
+## remove rates not considered in the model (states F, G, H)
+#mod_avg <- mod_avg[which(is.na(str_extract(colnames(mod_avg), "..E|..F|..G|..H")))]  
+
 #write.csv(mod_avg, file="Best supported models.csv")
 
 
+## 2.3 Rate estimates ---------------------------------------------------------
+
+## split into evolutionary rates and character transition rates
+evol <- mod_avg[,-c(1:11)]
+evol <- evol[which(is.na(str_extract(colnames(evol), "q")))] # all rates that are NOT transition rates
+
+tran <- mod_avg[,-c(1:11)]
+tran <- tran[which(!is.na(str_extract(colnames(tran), "q")))] # transition rates only
+
+evol$model <- str_replace(rownames(evol), ".RDS", "") # remove file suffix from model names
+
+# melt into long form removing the (wrongly) averaged values
+evo <- as_tibble(evol[-which(rownames(evol) == "averaged_24trees"),]) %>%
+    pivot_longer(!model, names_to = "rate", values_to = "value") 
+
+{type <- modtype <- rtype <- AP <- state <- character()
+
+type[which(!is.na(str_extract(evo$rate, "s")))] <- "spec"
+type[which(!is.na(str_extract(evo$rate, "mu")))] <- "ext"
+type[which(!is.na(str_extract(evo$rate, "lambda")))] <- "net.div"
+
+for (i in 1:nrow(evo)){
+    modtype[i] <- str_extract(str_split(evo$model[i], "_")[[1]][1], "[0-9]")
+    rtype[i] <- str_sub(evo$rate[i], start = 1L, end = -2L)}
+
+AP[which(str_sub(evo$rate, start = -3L, end = -2L) == "00")] <- "Noct"
+AP[which(str_sub(evo$rate, start = -3L, end = -2L) == "01")] <- "Cath"
+AP[which(str_sub(evo$rate, start = -3L, end = -2L) == "11")] <- "Diur"
+
+state <- str_sub(evo$rate, start = -1L, end = -1L)
+}
+
+evo <- cbind(evo,type, modtype, rtype, AP, state)
+
+# remove NA params for state D in 3-states models (some appear as 0 instead of NA)
+three_States <- which(str_sub(evo$modtype, start = -1L, end = -1L) == 3)
+Dstate <- which(evo$state == "D")
+evo <- evo[-intersect(three_States, Dstate),] 
+rm(three_States, Dstate)
+
+# plot estimates
+# This code loads the function in the working environment
+source("https://gist.githubusercontent.com/benmarwick/2a1bb0133ff568cbe28d/raw/fb53bd97121f7f9ce947837ef1a4c65a73bffb3f/geom_flat_violin.R")
+
+tb1 <- evo[which(evo$model != "vrMuHiSSE4_MCCtree"),] # exclude MCCtree
+tb2 <- tb1[which(tb1$modtype == 3),] # 3-state models
+tb3 <- tb2[which(tb2$state != "A"),]
+
+ggplot(tb2, aes(x = rtype, y = value, fill = AP)) +
+    geom_flat_violin(position = position_nudge(x = .15, y = 0), alpha = .8) +
+    geom_point(colour = "grey20", position = position_jitter(width = .2), shape = 21, size = 1.5, alpha = 0.3) +
+    geom_boxplot(width = .15, outlier.shape = NA, alpha = 0.5) +
+    theme_light() +
+    theme(axis.text.x = element_text(angle = 80, vjust = 1, hjust = 1)) +
+    facet_wrap(~modtype) + 
+    scale_fill_manual(values = cols <- c("#12dd3A","gold1","dodgerblue3")) +
+    scale_colour_manual(values = c("#5A4A6F", "#E47250",  "#EBB261", "#9D5A6C","#5A4A6F", "#E47250",  "#EBB261", "#9D5A6C")) +
+    #scale_fill_viridis_d(begin = .3, end = .9, direction = -1, alpha=0.8) +
+    #labs(y = "BIC", x = "States") +
+    # Removing legends
+    guides(fill = FALSE, color = FALSE) #+
+    # Setting the limits of the y axis
+    #scale_y_continuous(limits = c(17400, 18600)) +
+    
+evo %>% group_by(state) %>% tally()
+
+TODO:
+    ##  *** try MarginReconMuHiSSE() and use the output for 
+    ##      GetModelAveRates()
+    ##      for plot() (plot.muhisse.states)
+    ##      and for SupportRegionMuHiSSE()
+    
+    
 ## summary of estimated rates
 library(data.table)
-div_rate <- as.data.table(mod_avg[,-c(1:4,6:11)])
+rates <- as.data.table(mod_avg[,-c(1:11)])
 mods <- NA
 for (i in 1:nrow(mod_avg)){mods <- c(mods, strsplit(rownames(mod_avg)[i],"[.]")[[1]][1])}
 #names(mods) <- "model"
@@ -447,35 +522,7 @@ rates <- melt(div_rate, id.vars = c("model","npar"), measure.vars = colnames(div
 #colnames(div_rate) <- str_sub(colnames(div_rate),1, nchar(colnames(div_rate))-1)
 
 
-ggplot(data = div_rate, aes(x = "lambda11A")) +
-    #geom_flat_violin(position = position_nudge(x = .2, y = 0), alpha = .8) +
-    geom_boxplot(width = .15, outlier.shape = NA, alpha = 0.5) +
-    #geom_point(aes(y = BIC, x = as.factor(states), color = as.factor(states)), 
-    geom_point(position = position_jitter(width = .1), size = 2, alpha = 0.6) +
-    #labs(color = "States", fill = "States") +
-    #xlab("No. of states") +
-    #facet_wrap(~type,) +
-    expand_limits(x = 5.25) +
-    guides(fill = FALSE, color = FALSE) + # don't show a legend
-    #scale_color_brewer(palette = "Spectral") +
-    #scale_fill_brewer(palette = "Spectral") +
-    scale_fill_viridis_d(option = "viridis", begin = .3, end = .9, alpha=0.8, direction = -1) +
-    scale_color_viridis_d(option = "viridis", begin = .3, end = .9, alpha=0.8, direction = -1) +
-    #scale_fill_manual(values = c("#5A4A6F", "#E47250",  "#EBB261", "#9D5A6E")) + #, "2CD11E")) +
-    #scale_colour_manual(values = c("#5A4A6F", "#E47250",  "#EBB261", "#9D5A6E")) + #, "2CD11E")) +
-    theme_minimal() 
 
-
-ggplot(leading, aes(x = as.factor(states), y = BIC, fill = as.factor(states))) +
-    #geom_flat_violin(position = position_nudge(x = .2, y = 0), alpha = .8) +
-    geom_boxplot(width = .3, outlier.shape = NA, alpha = 0.7) +
-    geom_point(aes(y = BIC), colour = 'grey30', position = position_jitter(width = .1), shape = 21, size = 2, alpha = 0.8) +
-    #theme_light() +
-    scale_fill_manual(values = c("#5A4A6F", "#E47250",  "#EBB261", "#9D5A6C")) +
-    scale_colour_manual(values = c("#5A4A6F", "#E47250",  "#EBB261", "#9D5A6C")) +
-    labs(y = "BIC", x = "States") +
-    # Removing legends
-    guides(fill = FALSE, color = FALSE) 
 
 # 3. Follow up analyses -------------------------------------------------------
 
