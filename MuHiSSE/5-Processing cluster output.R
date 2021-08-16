@@ -600,7 +600,7 @@ for (z in unique(binordA$tree)) {
     dat$weight <- dat$rel_lik / sum(dat$rel_lik) # this is identical to rel_lik on most trees
     ordbyt <- rbind(ordbyt, dat[order(dat$diff_AIC, decreasing = FALSE),])
 }
-BINordbytA <- ordbyt[order(ordbyt$tree, ordbyt$AICc),]
+binordbytA <- ordbyt[order(ordbyt$tree, ordbyt$AICc),]
 
 # and again for BIC:
 ordbyt <- data.frame()
@@ -613,7 +613,7 @@ for (z in unique(binordB$tree)) {
     dat$weight <- dat$rel_lik / sum(dat$rel_lik)
     ordbyt <- rbind(ordbyt, dat[order(dat$diff_BIC, decreasing = FALSE),])
 }
-BINordbytB<- ordbyt[order(ordbyt$tree, ordbyt$BIC),]
+binordbytB<- ordbyt[order(ordbyt$tree, ordbyt$BIC),]
 
 
 ### 5.1.2 Support summary plots -----------------------------------------------
@@ -649,27 +649,6 @@ ggplot(score, aes(x = reorder(tree, BIC, FUN = max), y = BIC, colour = as.factor
     labs(color = "States") +
     xlab("tree variant") +
     scale_color_viridis_d(option = "inferno", begin = 0, end = .9)}
-dev.off()
-
-#df3 <- score[score$states == 1,]
-pdf(file = "Model support unordered.pdf",width = 10, height = 10)  #png(file = "likelihood by model type.png",width = 7, height = 8.5, units = "in", res=800)
-{ggplot(score) +
-    geom_point(aes(x=tree, AICc, colour = as.factor(states)), alpha= .8, size = 2) + # use: "reorder(tree, -loglik, FUN = mean)" instead of "tree" to order trees by loglik
-    geom_point(data = score, aes(tree, AICc), colour = 'grey20', shape = 1, size = 2) + 
-    theme_light() +
-    theme(axis.text.x = element_text(angle = 80, vjust = 1, hjust = 1)) +
-    labs(color = "States") +
-    facet_wrap(~type) + #, nrow = 1) + 
-    scale_color_viridis_d(option = "viridis", begin = .1, end = .9, direction = -1)
-
-ggplot(score) +
-    geom_point(aes(x=tree, BIC, colour = as.factor(states)), alpha= .8, size = 2) + # use: "reorder(tree, -loglik, FUN = mean)" instead of "tree" to order trees by loglik
-    geom_point(data = score, aes(tree, BIC), colour = 'grey20', shape = 1, size = 2) + 
-    theme_light() +
-    theme(axis.text.x = element_text(angle = 80, vjust = 1, hjust = 1)) +
-    labs(color = "States") +
-    facet_wrap(~type) + #, nrow = 1) + 
-    scale_color_viridis_d(option = "inferno", begin = .1, end = .9, direction = -1)}
 dev.off()
 
 #pdf(file = "Model support by no. of states.pdf", width = 7, height = 8.5)
@@ -731,24 +710,256 @@ ggplot(data = vars, aes(y = BIC, x = as.factor(states), fill = as.factor(states)
 dev.off()
 
 # plotting support by no. states with trendlines to show that the pattern is uniform accross trees
-pdf(file = "Model support by states_tree-trendlines.pdf", width = 7, height = 8.5)
+pdf(file = "Model support by state_trendlines.pdf", width = 7, height = 8.5)
+{ggplot(vars,aes(x=states, AICc, colour = reorder(tree, AICc, FUN = mean), group = tree)) +
+    geom_point(alpha= .5, size = 2) +
+    # use the below if need to plot MCC along with tree variants
+    #geom_point(data = tert[tert$tree == "MCC",], aes(states, AICc), colour = 'grey10', shape = 4, size = 2) + 
+    geom_line() +
+    theme(axis.text.x = element_text(angle = 80, vjust = 1, hjust = 1)) +
+    theme_minimal() +
+    guides(colour=FALSE) +
+    facet_wrap(~type,) + 
+    scale_color_viridis_d(option = "turbo", alpha = .5, direction = -1)
+
+ggplot(vars,aes(x=states, BIC, colour = reorder(tree, BIC, FUN = mean), group = tree)) +
+    geom_point(alpha= .5, size = 2) +
+    geom_line() +
+    theme(axis.text.x = element_text(angle = 80, vjust = 1, hjust = 1)) +
+    theme_minimal() +
+    guides(colour=FALSE) +
+    facet_wrap(~type,) + 
+    scale_color_viridis_d(option = "turbo", alpha = .5, direction = -1)}
+dev.off()
+
+# comparing likelihood of all models, divided to model type and no. of states, grouped by tree
+#pdf(file="likelihood by states_MCC marked.pdf", width = 10, height = 8)
+#df1 <- tert[tert$states != 1,]
+#df2 <- subset(df1, df1$tree =="MCC")    # get only MCC models separately
+#
+#ggplot(df1, aes(x = reorder(tree, loglik, FUN = max), y = loglik, colour = as.factor(states))) +
+#    geom_point(alpha= .8, size = 2.5) + 
+#    #geom_point(data = df2, colour = 'white', shape = 3, size = 2) + 
+#    geom_point(data = df2, aes(tree, loglik), colour = 'red', shape = 1, size = 3) + 
+#    facet_wrap(~type) + 
+#    theme_light() +
+#    theme(axis.text.x = element_text(angle = 80, vjust = 1, hjust = 1)) +
+#    labs(color = "States") +
+#    scale_color_viridis_d(option = "viridis", begin = 0, end = .9, direction = -1)
+#dev.off()
+
+# comparing model type performance
+pdf(file="model type performance by tree.pdf", width = 10, height = 8)
+{ggplot(binordbytA, aes(x=states, AICc, colour = type, group=type)) +
+    geom_point(alpha= .8, size = 3) + 
+    geom_line(size = 1.5, alpha = 0.8) +
+    theme_light() +
+    facet_wrap(~tree, nrow = 5) + 
+    scale_color_viridis_d(option = "viridis", #inferno, turbo, mako
+                          begin = .2, end = .8, direction = -1)
+ggplot(binordbytB, aes(x=states, BIC, colour = type, group=type)) +
+    geom_point(alpha= .8, size = 3) +  
+    geom_line(size = 1.5, alpha = 0.8) +
+    theme_light() +
+    facet_wrap(~tree, nrow = 5) + 
+    scale_color_viridis_d(option = "inferno", #inferno, turbo, mako
+                          begin = .2, end = .8, direction = -1)}
+dev.off()
+
+
+## 5.2 Strict diurnality only --------------------------------------------------
+setwd("C:/Users/Roi Maor/Desktop/2nd Chapter/DivRates/MuHiSSE/Analyses/ResultsCluster/Binary/D-CN")
+
+## repeating stages 1-2 for binary models:
+
+allmods <- list.files(pattern = ".RDS")
+
+### 5.2.1 Model fit -----------------------------------------------------------
+
+modat <- data.frame(t(sapply(allmods, extRDS)))
+score <- as.data.frame(do.call(cbind, lapply(modat[,1:3], as.numeric)))
+rownames(score) <- rownames(modat)
+score$BIC <- NA
+score$type <- NA
+score$states <- NA
+score$npar <- NA
+score$tree <- NA
+
+# extract model parameters from file name
+for (i in 1:nrow(score)){
+    score$type[i] <- gsub("[0-9]", "", strsplit(rownames(score[i,]),"_")[[1]][1])       # model type
+    score$states[i] <- as.numeric(gsub("[^0-9]", "", strsplit(rownames(score[i,]),"_")[[1]][1]))    # no. of hidden states
+    if (score$type[i] == "nullbin") { 
+        score$type[i] <- "bvrCID"
+        score$states[i] <- 1
+        score$npar[i] <- 4              # no. of parameters calculated in "Evolutionary models.xlsx"
+    } else if (score$type[i] == "BiSSE") { 
+        score$type[i] <- "vrHiSSE"
+        score$states[i] <- 1
+        score$npar[i] <- 5
+    } else if (score$type[i] == "bvrCID") { 
+        score$npar[i] <- (score$states[i]+1)^2
+    } else if (score$type[i] == "vrHiSSE") { 
+        score$npar[i] <- score$states[i]*(score$states[i]+3)+1
+    } 
+    # tree variant index
+    if (strsplit(rownames(score[i,]),"_")[[1]][2] == "MCCtree") {
+        score$tree[i] <- "MCC"
+    } else {
+        score$tree[i] <- gsub("[^0-9]", "", strsplit(rownames(score[i,]),"_")[[1]][2])}
+} 
+
+# calculate BIC [the number of data points (n=2400) should change in clade-wise models
+for (i in 1:nrow(score)){
+    score$BIC[i] <- -2*score$loglik[i] + log(2400) * score$npar[i]}
+
+
+## model selection by AICc and BIC
+binordA <- score[order(score$AICc),]
+binordA <- binordA[,c("tree","type","states","loglik","npar","AIC","AICc","BIC")]
+binordB <- score[order(score$BIC),]
+binordB <- binordB[,c("tree","type","states","loglik","npar","AIC","AICc","BIC")]
+
+ordbyt <- data.frame()
+# calculate delta AICc/BIC for each tree
+for (z in unique(binordA$tree)) {
+    dat <- binordA[which(binordA$tree == z),]
+    dat <- dat[order(dat$AICc),]
+    dat$diff_AIC <- dat$AICc - min(dat$AICc)
+    dat$rel_lik <- exp(-0.5 * dat$diff_AIC)
+    dat$weight <- dat$rel_lik / sum(dat$rel_lik) # this is identical to rel_lik on most trees
+    ordbyt <- rbind(ordbyt, dat[order(dat$diff_AIC, decreasing = FALSE),])
+}
+binordbytA <- ordbyt[order(ordbyt$tree, ordbyt$AICc),]
+
+# and again for BIC:
+ordbyt <- data.frame()
+# calculate relative model support for each tree
+for (z in unique(binordB$tree)) {
+    dat <- binordB[which(binordB$tree == z),]
+    dat <- dat[order(dat$BIC),]
+    dat$diff_BIC <- dat$BIC - min(dat$BIC)
+    dat$rel_lik <- exp(-0.5 * dat$diff_BIC)
+    dat$weight <- dat$rel_lik / sum(dat$rel_lik)
+    ordbyt <- rbind(ordbyt, dat[order(dat$diff_BIC, decreasing = FALSE),])
+}
+binordbytB<- ordbyt[order(ordbyt$tree, ordbyt$BIC),]
+
+
+### 5.2.2 Support summary plots -----------------------------------------------
+setwd("C:/Users/Roi Maor/Desktop/2nd Chapter/DivRates/MuHiSSE/Output/D-CN")
+#write.csv(score, file="score_D-CN.csv", row.names = FALSE)
+#write.csv(binordbytA, file="Model AICc fit by tree.csv")
+#write.csv(binordbytB, file="Model BIC fit by tree.csv")
+
+## plotting likelihood as function of tree variant and model type
+
+# comparing all models by BIC, divided to model type and no. of states, grouped by tree
+pdf(file="Model support ordered_MCC marked.pdf", width = 10, height = 8)
+#df1 <- score[score$states != 1,]
+
+df2 <- subset(score, score$tree =="MCC")    # get only MCC models separately
+#par(mfrow=c(2,1))
+ggplot(score, aes(x = reorder(tree, AICc, FUN = max), y = AICc, colour = as.factor(states))) +
+    geom_point(alpha= .5, size = 2.5) + 
+    geom_point(data = df2, aes(tree, AICc), colour = 'red', shape = 1, size = 3) +
+    scale_y_reverse() + 
+    facet_wrap(~type) + 
+    theme_light() +
+    theme(axis.text.x = element_text(angle = 80, vjust = 1, hjust = 1)) +
+    labs(color = "States") +
+    xlab("tree variant") +
+    scale_color_viridis_d(option = "viridis", begin = 0, end = .9, direction = -1)
+
+ggplot(score, aes(x = reorder(tree, BIC, FUN = max), y = BIC, colour = as.factor(states))) +
+    geom_point(alpha= .5, size = 2.5) + 
+    geom_point(data = df2, aes(tree, BIC), colour = 'red', shape = 1, size = 3) + 
+    scale_y_reverse() +
+    facet_wrap(~type) + 
+    theme_light() +
+    theme(axis.text.x = element_text(angle = 80, vjust = 1, hjust = 1)) +
+    labs(color = "States") +
+    xlab("tree variant") +
+    scale_color_viridis_d(option = "inferno", begin = 0, end = .9)
+dev.off()
+
+#pdf(file = "Model support by no. of states.pdf", width = 7, height = 8.5)
+#library(ggridges)
+
+## code for this figure adapted from: https://ourcodingclub.github.io/tutorials/dataviz-beautification-synthesis/#distributions 
+# This code loads the function in the working environment
+source("https://gist.githubusercontent.com/benmarwick/2a1bb0133ff568cbe28d/raw/fb53bd97121f7f9ce947837ef1a4c65a73bffb3f/geom_flat_violin.R")
+# theme from: https://neuroconscience.wordpress.com/2018/03/15/introducing-raincloud-plots/
+
+raincloud_theme = theme(
+    text = element_text(size = 10),
+    axis.title.x = element_text(size = 16),
+    axis.title.y = element_text(size = 16),
+    axis.text = element_text(size = 14),
+    axis.text.x = element_text(angle = 45, vjust = 0.5),
+    legend.title=element_text(size=16),
+    legend.text=element_text(size=16),
+    legend.position = "right",
+    plot.title = element_text(lineheight=.8, face="bold", size = 16),
+    panel.border = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.grid.major = element_blank(),
+    axis.line.x = element_line(colour = 'black', size=0.5, linetype='solid'),
+    axis.line.y = element_line(colour = 'black', size=0.5, linetype='solid'))
+
+# plotting support by no. states, aggregaetd over all variants
+vars <- score[-which(score$tree == "MCC"),]
+pdf(file = "Model support aggregated.pdf", width = 8.5, height = 6)
+ggplot(data = vars, aes(y = AICc, x = as.factor(states), fill = as.factor(states))) +
+    geom_flat_violin(position = position_nudge(x = .2, y = 0), alpha = .8) +
+    geom_boxplot(width = .15, outlier.shape = NA, alpha = 0.5) +
+    geom_point(aes(y = AICc, x = as.factor(states), color = as.factor(states)), 
+               position = position_jitter(width = .1), size = 2, alpha = 0.6) +
+    xlab("No. of states") +
+    facet_wrap(~type,) +
+    expand_limits(x = 5.25) +
+    guides(fill = FALSE, color = FALSE) + # don't show a legend
+    #scale_color_brewer(palette = "Spectral") +
+    #scale_fill_brewer(palette = "Spectral") +
+    scale_fill_viridis_d(option = "viridis", begin = .3, end = .9, alpha=0.8, direction = -1) +
+    scale_color_viridis_d(option = "viridis", begin = .3, end = .9, alpha=0.8, direction = -1) +
+    #scale_fill_manual(values = c("#5A4A6F", "#E47250",  "#EBB261", "#9D5A6E")) +
+    #scale_colour_manual(values = c("#5A4A6F", "#E47250",  "#EBB261", "#9D5A6E")) +
+    theme_minimal() 
+
+ggplot(data = vars, aes(y = BIC, x = as.factor(states), fill = as.factor(states))) +
+    geom_flat_violin(position = position_nudge(x = .2, y = 0), alpha = .8) +
+    geom_boxplot(width = .15, outlier.shape = NA, alpha = 0.5) +
+    geom_point(aes(y = BIC, x = as.factor(states), color = as.factor(states)), 
+               position = position_jitter(width = .1), size = 2, alpha = 0.6) +
+    xlab("No. of states") +
+    facet_wrap(~type,) +
+    expand_limits(x = 5.25) +
+    guides(fill = FALSE, color = FALSE) + # don't show a legend
+    scale_fill_viridis_d(option = "inferno", begin = .3, end = .9, alpha=0.8, direction = -1) +
+    scale_color_viridis_d(option = "inferno", begin = .3, end = .9, alpha=0.8, direction = -1) +
+    theme_minimal()
+dev.off()
+
+# plotting support by no. states with trendlines to show that the pattern is uniform accross trees
+pdf(file = "Model support by state_trendlines.pdf", width = 7, height = 8.5)
 ggplot(vars,aes(x=states, AICc, colour = reorder(tree, AICc, FUN = mean), group = tree)) +
     geom_point(alpha= .5, size = 2) +
     # use the below if need to plot MCC along with tree variants
     #geom_point(data = tert[tert$tree == "MCC",], aes(states, AICc), colour = 'grey10', shape = 4, size = 2) + 
     geom_line() +
     theme(axis.text.x = element_text(angle = 80, vjust = 1, hjust = 1)) +
-    labs(color = "Tree variant") +
+    theme_minimal() +
+    guides(colour=FALSE) +
     facet_wrap(~type,) + 
     scale_color_viridis_d(option = "turbo", alpha = .5, direction = -1)
 
 ggplot(vars,aes(x=states, BIC, colour = reorder(tree, BIC, FUN = mean), group = tree)) +
     geom_point(alpha= .5, size = 2) +
-    # use the below if need to plot MCC along with tree variants
-    #geom_point(data = tert[tert$tree == "MCC",], aes(states, BIC), colour = 'grey10', shape = 4, size = 2) + 
     geom_line() +
     theme(axis.text.x = element_text(angle = 80, vjust = 1, hjust = 1)) +
-    labs(color = "Tree variant") +
+    theme_minimal() +
+    guides(colour=FALSE) +
     facet_wrap(~type,) + 
     scale_color_viridis_d(option = "turbo", alpha = .5, direction = -1)
 dev.off()
@@ -771,37 +982,18 @@ dev.off()
 
 # comparing model type performance
 pdf(file="model type performance by tree.pdf", width = 10, height = 8)
-ggplot(ordbytA, aes(x=states, AICc, colour = type, group=type)) +
-    geom_point(alpha= .5, size = 3) + 
-    geom_line(size = 1.5, alpha = 0.5) +
+ggplot(binordbytA, aes(x=states, AICc, colour = type, group=type)) +
+    geom_point(alpha= .8, size = 3) + 
+    geom_line(size = 1.5, alpha = 0.8) +
+    theme_light() +
+    facet_wrap(~tree, nrow = 5) + 
+    scale_color_viridis_d(option = "viridis", #inferno, turbo, mako
+                          begin = .2, end = .8, direction = -1)
+ggplot(binordbytB, aes(x=states, BIC, colour = type, group=type)) +
+    geom_point(alpha= .8, size = 3) +  
+    geom_line(size = 1.5, alpha = 0.8) +
     theme_light() +
     facet_wrap(~tree, nrow = 5) + 
     scale_color_viridis_d(option = "inferno", #inferno, turbo, mako
-                          begin = 0, end = .8, direction = -1)
-ggplot(ordbytB, aes(x=states, BIC, colour = type, group=type)) +
-    geom_point(alpha= .5, size = 3) +  
-    geom_line(size = 1.5, alpha = 0.5) +
-    theme_light() +
-    facet_wrap(~tree, nrow = 5) + 
-    scale_color_viridis_d(option = "inferno", #inferno, turbo, mako
-                          begin = 0, end = .9, direction = -1)
+                          begin = .2, end = .8, direction = -1)
 dev.off()
-
-# comparing likelihood of all models, divided to trees and no. of states, grouped by model type
-#pdf(file="likelihood by trees.pdf", width = 10, height = 8)
-#ggplot(ordbyt) +
-#    geom_point(aes(x=type, loglik, colour = factor(states)), alpha= .8, size = 2) +
-#    theme_light() +
-#    theme(axis.text.x = element_text(angle = 20, vjust = 1, hjust = 1)) +
-#    facet_wrap(~tree, nrow = 3) + 
-#    scale_color_viridis_d(option = "viridis", 
-#                          begin = 0,
-#                          end = .9,
-#                          direction = -1)
-#dev.off()
-
-
-## 5.2 Strict diurnality only --------------------------------------------------
-setwd("C:/Users/Roi Maor/Desktop/2nd Chapter/DivRates/MuHiSSE/Analyses/ResultsCluster/Binary/D-CN")
-
-
