@@ -1,7 +1,6 @@
 ### Processing output from MuHiSSE models (run on cluster)
 
 library("tidyverse")
-#library("hisse")
 
 #* Function definitions ------------------------------------------------------
 
@@ -414,9 +413,9 @@ for (state in 1:max(leading$states)) {
 }
 
 
-### 2.2.2 model averaging -----------------------------------------------------
-## I did not average separately competing models for the same tree variant because the sometimes indicate different 
-## number of parameters, not just different estimated values. 
+### 2.2.2 model weighting -----------------------------------------------------
+## I did not average separately competing models of the same tree variant because they 
+## sometimes indicate different number of parameters, not just different estimated values. 
 
 # weight estimated values by model support for all tree variants (not for MCC)
 mod_avg <- leading
@@ -424,7 +423,7 @@ for (i in 1:length(which(mod_avg$tree != "MCC"))) {
     mod_avg[i,12:ncol(mod_avg)] <- mod_avg$weight[i] * mod_avg[i,12:ncol(mod_avg)]
 } 
 
-## ** this averaging is likely wrong so commented out
+# ** the belwo averaging is likely wrong so commented out
 #means <- colSums(mod_avg[which(mod_avg$tree != "MCC"),12:ncol(mod_avg)]) / 24 # mean rates
 #means <- c(rep(NA, 11), means)
 #mod_avg <- rbind(mod_avg, means)
@@ -444,10 +443,12 @@ evol <- evol[which(is.na(str_extract(colnames(evol), "q")))] # all rates that ar
 tran <- mod_avg[,-c(1:11)]
 tran <- tran[which(!is.na(str_extract(colnames(tran), "q")))] # transition rates only
 
+
+### 2.3.1 Evolutionary rates --------------------------------------------------
 evol$model <- str_replace(rownames(evol), ".RDS", "") # remove file suffix from model names
 
 # melt into long form removing the (wrongly) averaged values
-evo <- as_tibble(evol[-which(rownames(evol) == "averaged_24trees"),]) %>%
+evo <- as_tibble(evol, subset = rownames(evol) != "averaged_24trees") %>%
     pivot_longer(!model, names_to = "rate", values_to = "value") 
 
 {type <- modtype <- rtype <- AP <- state <- character()
@@ -468,19 +469,22 @@ state <- str_sub(evo$rate, start = -1L, end = -1L)
 }
 
 evo <- cbind(evo,type, modtype, rtype, AP, state)
-
-# remove NA params for state D in 3-states models (some appear as 0 instead of NA)
-three_States <- which(str_sub(evo$modtype, start = -1L, end = -1L) == 3)
-Dstate <- which(evo$state == "D")
-evo <- evo[-intersect(three_States, Dstate),] 
-rm(three_States, Dstate)
+###########################
+## removing transitions between states that do not exist in the model
+tri_state <- which(str_sub(evo$model, start = -10L, end = -10L) == 3) # 3-state models
+quad_state <- which(str_sub(evo$model, start = -10L, end = -10L) == 4)# 4-state models
+hi_states <- which(evo$state %in% c("D","E","F","G","H"))   # transitions outside states A-C
+vhi_states <- which(evo$state %in% c("E","F","G","H"))  # transitions outside states A-D
+remove <- c(intersect(tri_state, hi_states), intersect(quad_state, vhi_states))
+evo <- evo[-remove,]
+rm(tri_state, quad_state, hi_states, vhi_states, remove)
 
 # plot estimates
 # This code loads the function in the working environment
 source("https://gist.githubusercontent.com/benmarwick/2a1bb0133ff568cbe28d/raw/fb53bd97121f7f9ce947837ef1a4c65a73bffb3f/geom_flat_violin.R")
 
 tb1 <- evo[which(evo$model != "vrMuHiSSE4_MCCtree"),] # exclude MCCtree
-tb2 <- tb1[which(tb1$modtype == 3),] # 3-state models
+tb2 <- tb1[which(tb1$modtype == 3),] # only 3-state models
 tb3 <- tb2[which(tb2$state != "A"),]
 
 ggplot(tb2, aes(x = rtype, y = value, fill = AP)) +
@@ -501,6 +505,68 @@ ggplot(tb2, aes(x = rtype, y = value, fill = AP)) +
     
 evo %>% group_by(state) %>% tally()
 
+
+### 2.3.2 Transition rates ----------------------------------------------------
+tran$model <- str_replace(rownames(tran), ".RDS", "") # remove file suffix from model names
+
+# melt into long form removing the (wrongly) averaged values
+Trates <- as_tibble(tran, subset = rownames(tran) != "averaged_24trees") %>%
+    pivot_longer(!model, names_to = "rate", values_to = "value") 
+
+## removing transitions between states that do not exist in the model
+tri_state <- which(str_sub(Trates$model, start = -10L, end = -10L) == 3) # 3-state models
+quad_state <- which(str_sub(Trates$model, start = -10L, end = -10L) == 4)# 4-state models
+hi_states <- which(!is.na(str_extract(Trates$rate, "[D-H]")))   # transitions outside states A-C
+vhi_states <- which(!is.na(str_extract(Trates$rate, "[E-H]")))  # transitions outside states A-D
+remove <- c(intersect(tri_state, hi_states), intersect(quad_state, vhi_states))
+Trates <- Trates[-remove,]
+
+modtype <- rtype <- rclass <- character()
+for (i in 1:nrow(Trates)) {
+    modtype[i] <- str_extract(str_split(Trates$model[i], "_")[[1]][1], "[0-9]") # get # of states
+    rtype[i] <- gsub("[A-H]_", "->", str_sub(Trates$rate[i], start = 2L, end = -2L)) # transition type
+    if (rtype[i] %in% c("00->00","01->01","11->11")) {
+        rclass[i] <- "hidden change"
+    } else {
+        rclass[i] <- "character change"
+    }
+}
+Trates <- cbind(Trates, modtype, rtype, rclass)
+Trates$rtype <- sapply(Trates$rtype, gsub, pattern = "00", replacement = "N")
+Trates$rtype <- sapply(Trates$rtype, gsub, pattern = "01", replacement = "C") 
+Trates$rtype <- sapply(Trates$rtype, gsub, pattern = "11", replacement = "D")
+rm(modtype, rtype, rclass, tri_state, quad_state, hi_states, vhi_states, remove)
+
+tb1 <- Trates[which(Trates$model != "vrMuHiSSE4_MCCtree"),] # exclude MCCtree
+tb2 <- tb1[which(tb1$rclass == "character change"),]        # exclude hidden rates
+tb3 <- tb2[which(tb2$modtype == 3),]
+tb4 <- tb2[which(tb2$modtype == 4),]
+ggplot(tb2, aes(x = rtype, y = value)) +
+    #geom_flat_violin(position = position_nudge(x = .15, y = 0), alpha = .8) +
+    geom_point(colour = "grey20", position = position_jitter(width = .2), shape = 21, size = 1.5, alpha = 0.3) +
+    geom_boxplot(width = .15, outlier.shape = NA, alpha = 0.5) +
+    theme_light() +
+    theme(axis.text.x = element_text(angle = 80, vjust = 1, hjust = 1)) +
+    facet_wrap(~modtype) + 
+    scale_fill_manual(values = cols <- c("#12dd3A","gold1","dodgerblue3")) +
+    scale_colour_manual(values = c("#5A4A6F", "#E47250",  "#EBB261", "#9D5A6C","#5A4A6F", "#E47250",  "#EBB261", "#9D5A6C")) +
+    #scale_fill_viridis_d(begin = .3, end = .9, direction = -1, alpha=0.8) +
+    #labs(y = "BIC", x = "States") +
+    # Removing legends
+    guides(fill = FALSE, color = FALSE) #+
+# Setting the limits of the y axis
+#scale_y_continuous(limits = c(17400, 18600)) +
+
+ggplot(tb2, aes(x = rtype, y = value, fill = rtype, colour = rtype)) +
+    geom_boxplot() +
+    scale_y_continuous(limits = c(0,0.5)) +
+    facet_wrap(~modtype) +
+    theme_light() +
+    scale_fill_brewer(palette = "Spectral") +
+    scale_colour_brewer(palette = "Spectral") +
+    labs(x = NULL, y = "rate of transition")
+
+
 TODO:
     ##  *** try MarginReconMuHiSSE() and use the output for 
     ##      GetModelAveRates()
@@ -514,10 +580,10 @@ rates <- as.data.table(mod_avg[,-c(1:11)])
 mods <- NA
 for (i in 1:nrow(mod_avg)){mods <- c(mods, strsplit(rownames(mod_avg)[i],"[.]")[[1]][1])}
 #names(mods) <- "model"
-div_rate <- cbind(mods[-which(is.na(mods))], div_rate)
+div_rate <- cbind(mods[-which(is.na(mods))], rates)
 colnames(div_rate)[1] <- "model"
 # convert to long form 
-rates <- melt(div_rate, id.vars = c("model","npar"), measure.vars = colnames(div_rate)[3:ncol(div_rate)], variable.name = "rate")
+all_rates <- melt(div_rate, id.vars = c("model","npar"), measure.vars = colnames(div_rate)[3:ncol(div_rate)], variable.name = "rate")
 # aggregate rates over states by removing state name (capital letter) from rate name
 #colnames(div_rate) <- str_sub(colnames(div_rate),1, nchar(colnames(div_rate))-1)
 
@@ -525,9 +591,13 @@ rates <- melt(div_rate, id.vars = c("model","npar"), measure.vars = colnames(div
 
 
 # 3. Follow up analyses -------------------------------------------------------
-
+library("hisse")
 # 3.1 Reconstruction based on fitted models -----------------------------------
 TODO: extract parameters from estimated models
+
+mod <- readRDS(file="MuHiSSE2_tree6404.RDS")
+parest <- SupportRegionMuHiSSE(mod, n.points=1000, scale.int=0.1, desired.delta=2, min.number.points=10, verbose=TRUE)
+
 reco <- MarginReconMuHiSSE(tree, act3, f = freq, pars, hidden.states=1, 
                            condition.on.survival=TRUE, root.type="madfitz", 
                            root.p=NULL, AIC=NULL, get.tips.only=FALSE, 
