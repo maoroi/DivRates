@@ -30,6 +30,8 @@ score$states <- NA
 score$npar <- NA
 score$tree <- NA
 
+
+## 1.1 Extract model parameters ------------------------------------------------
 # extracting model parameters from file name
 for (i in 1:nrow(score)){
     score$type[i] <- gsub("[0-9]", "", strsplit(rownames(score[i,]),"_")[[1]][1])       # model type
@@ -64,7 +66,10 @@ for (i in 1:nrow(score)){
 
 tert <- score[which(score$type %in% c("CID","MuHiSSE","vrCID","vrMuHiSSE")),]
 
-## model selection by AICc and BIC
+
+## 1.2 Model selection ---------------------------------------------------------
+
+# model selection by AICc and BIC
 ordA <- tert[order(tert$AICc),]
 ordA <- ordA[,c("tree","type","states","loglik","npar","AIC","AICc","BIC")]
 ordB <- tert[order(tert$BIC),]
@@ -96,7 +101,7 @@ for (z in unique(ordB$tree)) {
 ordbytB<- ordbyt[order(ordbyt$tree, ordbyt$BIC),]
 
 
-# * Summarise support (plots) ----------------------------------------------------------
+## 1.3 Support summary plots --------------------------------------------------
 
 setwd("C:/Users/Roi Maor/Desktop/2nd Chapter/DivRates/MuHiSSE/Output")
 #write.csv(score, file="score.csv", row.names = FALSE)
@@ -110,22 +115,24 @@ df1 <- tert[tert$states != 1,]
 df2 <- subset(df1, df1$tree =="MCC")    # get only MCC models separately
 #par(mfrow=c(2,1))
 ggplot(df1, aes(x = reorder(tree, AICc, FUN = min), y = AICc, colour = as.factor(states))) +
-    geom_point(alpha= .5, size = 2.5) + 
+    geom_point(alpha= .75, size = 3) + 
     geom_point(data = df2, aes(tree, AICc), colour = 'red', shape = 1, size = 3) + 
     facet_wrap(~type) + 
     theme_light() +
     theme(axis.text.x = element_text(angle = 80, vjust = 1, hjust = 1)) +
     labs(color = "States") +
-    scale_color_viridis_d(option = "viridis", begin = 0, end = .9, direction = -1)
+    xlab("Tree variant (reordered for visualisation)") +
+    scale_color_viridis_d(option = "viridis", begin = .15, end = 1, direction = -1)
 
 ggplot(df1, aes(x = reorder(tree, BIC, FUN = min), y = BIC, colour = as.factor(states))) +
-    geom_point(alpha= .5, size = 2.5) + 
+    geom_point(alpha= .75, size = 3) + 
     geom_point(data = df2, aes(tree, BIC), colour = 'red', shape = 1, size = 3) + 
     facet_wrap(~type) + 
     theme_light() +
     theme(axis.text.x = element_text(angle = 80, vjust = 1, hjust = 1)) +
     labs(color = "States") +
-    scale_color_viridis_d(option = "inferno", begin = 0, end = .9)
+    xlab("Tree variant (reordered for visualisation)") +
+    scale_color_viridis_d(option = "inferno", begin = .1, end = .9)
 dev.off()
 
 df3 <- tert[tert$states == 1,]
@@ -232,39 +239,39 @@ vr <- vr[-which(vr$states == 6),]
 pdf(file = "Model support VR aggregated.pdf", width = 8.5, height = 6)
 ggplot(data = vr, aes(y = AICc, x = as.factor(states), fill = as.factor(states))) +
     geom_flat_violin(position = position_nudge(x = .2, y = 0), alpha = .8) +
-    geom_boxplot(width = .15, outlier.shape = NA, alpha = 0.5) +
     geom_point(aes(y = AICc, x = as.factor(states), color = as.factor(states)), 
-               position = position_jitter(width = .1), size = 2, alpha = 0.6) +
-    #labs(color = "States", fill = "States") +
+               position = position_jitter(width = .1), size = 3, alpha = 0.6) +
+    geom_boxplot(width = .15, outlier.shape = NA, alpha = 0.6) +
+    guides(fill = FALSE, color = FALSE) + # don't show a legend
+    #labs(color = "States", fill = "States") + # in case a legend is needed
     xlab("No. of states") +
     facet_wrap(~type,) +
     expand_limits(x = 5.25) +
-    guides(fill = FALSE, color = FALSE) + # don't show a legend
     #scale_color_brewer(palette = "Spectral") +
     #scale_fill_brewer(palette = "Spectral") +
-    scale_fill_viridis_d(option = "viridis", begin = .3, end = .9, alpha=0.8, direction = -1) +
-    scale_color_viridis_d(option = "viridis", begin = .3, end = .9, alpha=0.8, direction = -1) +
+    scale_fill_viridis_d(option = "viridis", begin = 0.1, end = .95, alpha = 0.8, direction = -1) +
+    scale_color_viridis_d(option = "viridis", begin = 0.1, end = .95, alpha = 1, direction = -1) +
     #scale_fill_manual(values = c("#5A4A6F", "#E47250",  "#EBB261", "#9D5A6E")) +
     #scale_colour_manual(values = c("#5A4A6F", "#E47250",  "#EBB261", "#9D5A6E")) +
-    theme_minimal() 
+    theme_minimal(base_size = 12) 
 
 ggplot(data = vr, aes(y = BIC, x = as.factor(states), fill = as.factor(states))) +
     geom_flat_violin(position = position_nudge(x = .2, y = 0), alpha = .8) +
-    geom_boxplot(width = .15, outlier.shape = NA, alpha = 0.5) +
     geom_point(aes(y = BIC, x = as.factor(states), color = as.factor(states)), 
-               position = position_jitter(width = .1), size = 2, alpha = 0.6) +
-    #labs(color = "States", fill = "States") +
+               position = position_jitter(width = .1), size = 3, alpha = 0.6) +
+    geom_boxplot(width = .15, outlier.shape = NA, alpha = 0.6) +
+    guides(fill = FALSE, color = FALSE) + # don't show a legend
+    #labs(color = "States", fill = "States") + # in case a legend is needed
     xlab("No. of states") +
     facet_wrap(~type,) +
     expand_limits(x = 5.25) +
-    guides(fill = FALSE, color = FALSE) + # don't show a legend
     #scale_color_brewer(palette = "Spectral") +
     #scale_fill_brewer(palette = "Spectral") +
-    scale_fill_viridis_d(option = "viridis", begin = .3, end = .9, alpha=0.8, direction = -1) +
-    scale_color_viridis_d(option = "viridis", begin = .3, end = .9, alpha=0.8, direction = -1) +
+    scale_fill_viridis_d(option = "inferno", begin = 0.1, end = 0.9, alpha = 0.8, direction = -1) +
+    scale_color_viridis_d(option = "inferno", begin = 0.1, end = 0.9, alpha = 1, direction = -1) +
     #scale_fill_manual(values = c("#5A4A6F", "#E47250",  "#EBB261", "#9D5A6E")) + #, "2CD11E")) +
     #scale_colour_manual(values = c("#5A4A6F", "#E47250",  "#EBB261", "#9D5A6E")) + #, "2CD11E")) +
-    theme_minimal() 
+    theme_minimal(base_size = 12) 
 dev.off()
 
 # plotting support by no. states with trendlines to show that the pattern is uniform accross trees
@@ -313,8 +320,8 @@ ggplot(ordbytA, aes(x=states, AICc, colour = type, group=type)) +
     geom_line(size = 1.5, alpha = 0.5) +
     theme_light() +
     facet_wrap(~tree, nrow = 5) + 
-    scale_color_viridis_d(option = "inferno", #inferno, turbo, mako
-                          begin = 0, end = .8, direction = -1)
+    scale_color_viridis_d(option = "viridis", #inferno, turbo, mako
+                          begin = 0, end = .95, direction = -1)
 ggplot(ordbytB, aes(x=states, BIC, colour = type, group=type)) +
     geom_point(alpha= .5, size = 3) +  
     geom_line(size = 1.5, alpha = 0.5) +
@@ -415,7 +422,7 @@ for (state in 1:max(leading$states)) {
 
 ### 2.2.2 model weighting -----------------------------------------------------
 ## I did not average separately competing models of the same tree variant because they 
-## sometimes indicate different number of parameters, not just different estimated values. 
+## indicate different number of parameters so not comparable. 
 
 # weight estimated values by model support for all tree variants (not for MCC)
 mod_avg <- leading
@@ -423,13 +430,14 @@ for (i in 1:length(which(mod_avg$tree != "MCC"))) {
     mod_avg[i,12:ncol(mod_avg)] <- mod_avg$weight[i] * mod_avg[i,12:ncol(mod_avg)]
 } 
 
-# ** the belwo averaging is likely wrong so commented out
+# ** the below averaging is likely wrong so commented out **
 #means <- colSums(mod_avg[which(mod_avg$tree != "MCC"),12:ncol(mod_avg)]) / 24 # mean rates
 #means <- c(rep(NA, 11), means)
 #mod_avg <- rbind(mod_avg, means)
 #rownames(mod_avg)[which(is.na(mod_avg$tree))] <- "averaged_24trees"
 ## remove rates not considered in the model (states F, G, H)
 #mod_avg <- mod_avg[which(is.na(str_extract(colnames(mod_avg), "..E|..F|..G|..H")))]  
+# ** end dodgy averaging procedure **
 
 #write.csv(mod_avg, file="Best supported models.csv")
 
@@ -469,7 +477,8 @@ state <- str_sub(evo$rate, start = -1L, end = -1L)
 }
 
 evo <- cbind(evo,type, modtype, rtype, AP, state)
-###########################
+####
+
 ## removing transitions between states that do not exist in the model
 tri_state <- which(str_sub(evo$model, start = -10L, end = -10L) == 3) # 3-state models
 quad_state <- which(str_sub(evo$model, start = -10L, end = -10L) == 4)# 4-state models
@@ -479,31 +488,41 @@ remove <- c(intersect(tri_state, hi_states), intersect(quad_state, vhi_states))
 evo <- evo[-remove,]
 rm(tri_state, quad_state, hi_states, vhi_states, remove)
 
-# plot estimates
+# plot rate estimates
 # This code loads the function in the working environment
-source("https://gist.githubusercontent.com/benmarwick/2a1bb0133ff568cbe28d/raw/fb53bd97121f7f9ce947837ef1a4c65a73bffb3f/geom_flat_violin.R")
+#source("https://gist.githubusercontent.com/benmarwick/2a1bb0133ff568cbe28d/raw/fb53bd97121f7f9ce947837ef1a4c65a73bffb3f/geom_flat_violin.R")
+
+setwd("C:/Users/Roi Maor/Desktop/2nd Chapter/DivRates/MuHiSSE/Output")
 
 tb1 <- evo[which(evo$model != "vrMuHiSSE4_MCCtree"),] # exclude MCCtree
 tb2 <- tb1[which(tb1$modtype == 3),] # only 3-state models
-tb3 <- tb2[which(tb2$state != "A"),]
+tb3 <- tb1[which(tb1$modtype == 4),] # only 4-state models
 
-ggplot(tb2, aes(x = rtype, y = value, fill = AP)) +
-    geom_flat_violin(position = position_nudge(x = .15, y = 0), alpha = .8) +
-    geom_point(colour = "grey20", position = position_jitter(width = .2), shape = 21, size = 1.5, alpha = 0.3) +
-    geom_boxplot(width = .15, outlier.shape = NA, alpha = 0.5) +
+pdf(file="Evolutionary rates estimates.pdf", width = 14, height = 8)
+ggplot(tb1, aes(x = rtype, y = value)) +
+    geom_flat_violin(aes(fill = AP), position = position_nudge(x = .15, y = 0), alpha = .8) +
+    geom_point(aes(fill = AP, colour = "grey20"), position = position_jitter(width = .1), shape = 21, size = 3, alpha = 0.6) +
+    geom_boxplot(aes(col = AP), width = .15, outlier.shape = NA, alpha = 0.6) +
     theme_light() +
     theme(axis.text.x = element_text(angle = 80, vjust = 1, hjust = 1)) +
     facet_wrap(~modtype) + 
-    scale_fill_manual(values = cols <- c("#12dd3A","gold1","dodgerblue3")) +
-    scale_colour_manual(values = c("#5A4A6F", "#E47250",  "#EBB261", "#9D5A6C","#5A4A6F", "#E47250",  "#EBB261", "#9D5A6C")) +
-    #scale_fill_viridis_d(begin = .3, end = .9, direction = -1, alpha=0.8) +
-    #labs(y = "BIC", x = "States") +
-    # Removing legends
-    guides(fill = FALSE, color = FALSE) #+
-    # Setting the limits of the y axis
-    #scale_y_continuous(limits = c(17400, 18600)) +
+    scale_fill_manual(values = cols <- c("green3","gold2","blue")) +
+    scale_colour_manual(values = c("green3","gold2","blue","blue")) + # no idea why 4 colours are needed, but 3 don't work
+    guides(fill = FALSE, color = FALSE)
+
+ggplot(tb1, aes(x = rtype, y = value)) +
+    geom_flat_violin(aes(fill = AP), position = position_nudge(x = .15, y = 0), alpha = .8) +
+    geom_point(aes(fill = AP, colour = "grey20"), position = position_jitter(width = .1), shape = 21, size = 3, alpha = 0.6) +
+    geom_boxplot(aes(col = AP), width = .15, outlier.shape = NA, alpha = 0.6) +
+    theme_light() +
+    theme(axis.text.x = element_text(angle = 80, vjust = 1, hjust = 1)) +
+    facet_wrap(~modtype) + 
+    scale_fill_manual(values = cols <- c("green3","gold2","blue")) +
+    scale_colour_manual(values = c("green3","gold2","blue","blue")) + # no idea why 4 colours are needed, but 3 don't work
+    guides(fill = FALSE, color = FALSE)
+dev.off()
     
-evo %>% group_by(state) %>% tally()
+tb1 %>% group_by(state) %>% tally()
 
 
 ### 2.3.2 Transition rates ----------------------------------------------------
@@ -513,7 +532,7 @@ tran$model <- str_replace(rownames(tran), ".RDS", "") # remove file suffix from 
 Trates <- as_tibble(tran, subset = rownames(tran) != "averaged_24trees") %>%
     pivot_longer(!model, names_to = "rate", values_to = "value") 
 
-## removing transitions between states that do not exist in the model
+# removing transitions between states that do not exist in the model
 tri_state <- which(str_sub(Trates$model, start = -10L, end = -10L) == 3) # 3-state models
 quad_state <- which(str_sub(Trates$model, start = -10L, end = -10L) == 4)# 4-state models
 hi_states <- which(!is.na(str_extract(Trates$rate, "[D-H]")))   # transitions outside states A-C
@@ -521,6 +540,7 @@ vhi_states <- which(!is.na(str_extract(Trates$rate, "[E-H]")))  # transitions ou
 remove <- c(intersect(tri_state, hi_states), intersect(quad_state, vhi_states))
 Trates <- Trates[-remove,]
 
+# adding useful information
 modtype <- rtype <- rclass <- character()
 for (i in 1:nrow(Trates)) {
     modtype[i] <- str_extract(str_split(Trates$model[i], "_")[[1]][1], "[0-9]") # get # of states
@@ -537,27 +557,28 @@ Trates$rtype <- sapply(Trates$rtype, gsub, pattern = "01", replacement = "C")
 Trates$rtype <- sapply(Trates$rtype, gsub, pattern = "11", replacement = "D")
 rm(modtype, rtype, rclass, tri_state, quad_state, hi_states, vhi_states, remove)
 
-tb1 <- Trates[which(Trates$model != "vrMuHiSSE4_MCCtree"),] # exclude MCCtree
-tb2 <- tb1[which(tb1$rclass == "character change"),]        # exclude hidden rates
-tb3 <- tb2[which(tb2$modtype == 3),]
-tb4 <- tb2[which(tb2$modtype == 4),]
-ggplot(tb2, aes(x = rtype, y = value)) +
-    #geom_flat_violin(position = position_nudge(x = .15, y = 0), alpha = .8) +
-    geom_point(colour = "grey20", position = position_jitter(width = .2), shape = 21, size = 1.5, alpha = 0.3) +
-    geom_boxplot(width = .15, outlier.shape = NA, alpha = 0.5) +
+tbr1 <- Trates[which(Trates$model != "vrMuHiSSE4_MCCtree"),] # exclude MCCtree
+tbr2 <- tbr1[which(tbr1$rclass == "character change"),]        # exclude hidden rates
+tbr3 <- tbr2[which(tbr2$modtype == 3),]
+tbr4 <- tbr2[which(tbr2$modtype == 4),]
+
+ggplot(tbr3, aes(x = rtype, y = value, fill = as.factor(rtype))) +
+    geom_flat_violin(position = position_nudge(x = .2, y = 0), alpha = .8) +
+    geom_point(colour = "grey20", position = position_jitter(width = .2), shape = 21, size = 1.5, alpha = 0.6) +
+    geom_boxplot(width = .15, outlier.shape = NA, alpha = 0.6) +
     theme_light() +
     theme(axis.text.x = element_text(angle = 80, vjust = 1, hjust = 1)) +
-    facet_wrap(~modtype) + 
-    scale_fill_manual(values = cols <- c("#12dd3A","gold1","dodgerblue3")) +
+    #facet_wrap(~modtype) + 
+    scale_fill_manual(values = cols <- c("#5A4A6F","#E47250","gold1","dodgerblue3")) +
     scale_colour_manual(values = c("#5A4A6F", "#E47250",  "#EBB261", "#9D5A6C","#5A4A6F", "#E47250",  "#EBB261", "#9D5A6C")) +
     #scale_fill_viridis_d(begin = .3, end = .9, direction = -1, alpha=0.8) +
     #labs(y = "BIC", x = "States") +
     # Removing legends
-    guides(fill = FALSE, color = FALSE) #+
-# Setting the limits of the y axis
-#scale_y_continuous(limits = c(17400, 18600)) +
+    guides(fill = FALSE, color = FALSE) +
+    # Setting the limits of the y axis
+    scale_y_continuous(limits = c(0, .03)) 
 
-ggplot(tb2, aes(x = rtype, y = value, fill = rtype, colour = rtype)) +
+ggplot(tbr4, aes(x = rtype, y = value, fill = rtype, colour = rtype)) +
     geom_boxplot() +
     scale_y_continuous(limits = c(0,0.5)) +
     facet_wrap(~modtype) +
