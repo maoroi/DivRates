@@ -63,7 +63,6 @@ score$type[which(score$type == 'null')] <- 'CID'
 for (i in 1:nrow(score)){
     score$BIC[i] <- -2*score$loglik[i] + log(2400) * score$npar[i]}
 
-
 tert <- score[which(score$type %in% c("CID","MuHiSSE","vrCID","vrMuHiSSE")),]
 
 
@@ -122,7 +121,8 @@ ggplot(df1, aes(x = reorder(tree, AICc, FUN = min), y = AICc, colour = as.factor
     theme(axis.text.x = element_text(angle = 80, vjust = 1, hjust = 1)) +
     labs(color = "States") +
     xlab("Tree variant (reordered for visualisation)") +
-    scale_color_viridis_d(option = "viridis", begin = .15, end = 1, direction = -1)
+    scale_color_viridis_d(option = "viridis", begin = .15, end = 1, alpha = 1, direction = -1) +
+    scale_fill_viridis_d(option = "inferno", begin = .1, end = .9, alpha = 0.5, direction = -1)
 
 ggplot(df1, aes(x = reorder(tree, BIC, FUN = min), y = BIC, colour = as.factor(states))) +
     geom_point(alpha= .75, size = 3) + 
@@ -132,7 +132,8 @@ ggplot(df1, aes(x = reorder(tree, BIC, FUN = min), y = BIC, colour = as.factor(s
     theme(axis.text.x = element_text(angle = 80, vjust = 1, hjust = 1)) +
     labs(color = "States") +
     xlab("Tree variant (reordered for visualisation)") +
-    scale_color_viridis_d(option = "inferno", begin = .1, end = .9)
+    scale_color_viridis_d(option = "inferno", begin = .1, end = .9, alpha = 1) +
+    scale_fill_viridis_d(option = "inferno", begin = .1, end = .9, alpha = 0.5)
 dev.off()
 
 df3 <- tert[tert$states == 1,]
@@ -202,7 +203,7 @@ raincloud_theme = theme(
     axis.line.x = element_line(colour = 'black', size=0.5, linetype='solid'),
     axis.line.y = element_line(colour = 'black', size=0.5, linetype='solid'))
 
-vars <- tert[-which(tert$tree == "MCC"),]
+vars <- tert[which(tert$tree != "MCC"),]
 vr <- vars[which(vars$type %in% c("vrCID", "vrMuHiSSE")),]
 vr <- vr[-which(vr$states == 6),]
 
@@ -498,27 +499,28 @@ tb1 <- evo[which(evo$model != "vrMuHiSSE4_MCCtree"),] # exclude MCCtree
 tb2 <- tb1[which(tb1$modtype == 3),] # only 3-state models
 tb3 <- tb1[which(tb1$modtype == 4),] # only 4-state models
 
-pdf(file="Evolutionary rates estimates.pdf", width = 14, height = 8)
+#png(file="Evolutionary rates estimate.png", width = 1600, height = 1200)
+pdf(file="Evolutionary rates estimate.pdf", width = 14, height = 8)
 ggplot(tb1, aes(x = rtype, y = value)) +
     geom_flat_violin(aes(fill = AP), position = position_nudge(x = .15, y = 0), alpha = .8) +
-    geom_point(aes(fill = AP, colour = "grey20"), position = position_jitter(width = .1), shape = 21, size = 3, alpha = 0.6) +
-    geom_boxplot(aes(col = AP), width = .15, outlier.shape = NA, alpha = 0.6) +
+    geom_point(aes(fill = AP), position = position_jitter(width = .1), shape = 21, size = 3, alpha = 0.6) +
+    geom_boxplot(width = .15, outlier.shape = NA, alpha = 0.7) +
     theme_light() +
     theme(axis.text.x = element_text(angle = 80, vjust = 1, hjust = 1)) +
     facet_wrap(~modtype) + 
     scale_fill_manual(values = cols <- c("green3","gold2","blue")) +
-    scale_colour_manual(values = c("green3","gold2","blue","blue")) + # no idea why 4 colours are needed, but 3 don't work
+    # the below line is used for coloring boxplots by AP
+    #scale_colour_manual(values = c("green3","gold2","blue","blue")) + # no idea why 4 colours are needed, but 3 don't work
     guides(fill = FALSE, color = FALSE)
 
 ggplot(tb1, aes(x = rtype, y = value)) +
     geom_flat_violin(aes(fill = AP), position = position_nudge(x = .15, y = 0), alpha = .8) +
-    geom_point(aes(fill = AP, colour = "grey20"), position = position_jitter(width = .1), shape = 21, size = 3, alpha = 0.6) +
-    geom_boxplot(aes(col = AP), width = .15, outlier.shape = NA, alpha = 0.6) +
+    geom_point(aes(fill = AP), position = position_jitter(width = .1), shape = 21, size = 3, alpha = 0.6) +
+    geom_boxplot(width = .15, outlier.shape = NA, alpha = 0.7) +
     theme_light() +
     theme(axis.text.x = element_text(angle = 80, vjust = 1, hjust = 1)) +
     facet_wrap(~modtype) + 
     scale_fill_manual(values = cols <- c("green3","gold2","blue")) +
-    scale_colour_manual(values = c("green3","gold2","blue","blue")) + # no idea why 4 colours are needed, but 3 don't work
     guides(fill = FALSE, color = FALSE)
 dev.off()
     
@@ -543,7 +545,9 @@ Trates <- Trates[-remove,]
 # adding useful information
 modtype <- rtype <- rclass <- character()
 for (i in 1:nrow(Trates)) {
-    modtype[i] <- str_extract(str_split(Trates$model[i], "_")[[1]][1], "[0-9]") # get # of states
+    prefix <- str_split(Trates$model[i], "Mu")[[1]][1]
+    num <- str_extract(str_split(Trates$model[i], "_")[[1]][1], "[0-9]") # get # of states
+    modtype[i] <- paste0(prefix,num)
     rtype[i] <- gsub("[A-H]_", "->", str_sub(Trates$rate[i], start = 2L, end = -2L)) # transition type
     if (rtype[i] %in% c("00->00","01->01","11->11")) {
         rclass[i] <- "hidden change"
@@ -562,30 +566,27 @@ tbr2 <- tbr1[which(tbr1$rclass == "character change"),]        # exclude hidden 
 tbr3 <- tbr2[which(tbr2$modtype == 3),]
 tbr4 <- tbr2[which(tbr2$modtype == 4),]
 
-ggplot(tbr3, aes(x = rtype, y = value, fill = as.factor(rtype))) +
+# plot transition rate estimates
+pdf(file="Transition rates estimate.pdf", width = 10, height = 7)
+ggplot(transform(tbr2, rtype=factor(rtype, levels=c("N->C","C->N","C->D","D->C"))),
+       aes(x = rtype, y = log(value), fill = as.factor(rtype))) +
+    #ggplot(tbr2, aes(x = rtype, y = log(value), fill = as.factor(rtype))) +
     geom_flat_violin(position = position_nudge(x = .2, y = 0), alpha = .8) +
-    geom_point(colour = "grey20", position = position_jitter(width = .2), shape = 21, size = 1.5, alpha = 0.6) +
+    geom_point(colour = "grey20", position = position_jitter(width = .1), shape = 21, size = 1.5, alpha = 0.8) +
     geom_boxplot(width = .15, outlier.shape = NA, alpha = 0.6) +
+    geom_hline(aes(yintercept = log(10^-6), colour = 'red'), linetype = 2) + # this marks the effective rate of 0, because 10^-6 transitions per lineage per million years is 1 transition per 10000 lineages per 100 million years, which is unlikely to be detected when I examine <2500 lineages over 160 million years
     theme_light() +
-    theme(axis.text.x = element_text(angle = 80, vjust = 1, hjust = 1)) +
-    #facet_wrap(~modtype) + 
+    #facet_wrap(~modtype) +
+    theme(axis.text.x = element_text(vjust = 1, hjust = 1)) +
     scale_fill_manual(values = cols <- c("#5A4A6F","#E47250","gold1","dodgerblue3")) +
     scale_colour_manual(values = c("#5A4A6F", "#E47250",  "#EBB261", "#9D5A6C","#5A4A6F", "#E47250",  "#EBB261", "#9D5A6C")) +
-    #scale_fill_viridis_d(begin = .3, end = .9, direction = -1, alpha=0.8) +
-    #labs(y = "BIC", x = "States") +
-    # Removing legends
-    guides(fill = FALSE, color = FALSE) +
+    labs(y = "log(transition rate)", x = "Transition type (from -> to)") +
+    guides(fill = FALSE, color = FALSE) #+
     # Setting the limits of the y axis
-    scale_y_continuous(limits = c(0, .03)) 
+    #scale_y_continuous(limits = c(0, .03)) 
+dev.off()
 
-ggplot(tbr4, aes(x = rtype, y = value, fill = rtype, colour = rtype)) +
-    geom_boxplot() +
-    scale_y_continuous(limits = c(0,0.5)) +
-    facet_wrap(~modtype) +
-    theme_light() +
-    scale_fill_brewer(palette = "Spectral") +
-    scale_colour_brewer(palette = "Spectral") +
-    labs(x = NULL, y = "rate of transition")
+
 
 
 TODO:
