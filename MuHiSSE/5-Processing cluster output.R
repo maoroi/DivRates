@@ -382,7 +382,7 @@ for (i in colnames(params)) {
         colnames(div)[which(colnames(div) == i)] <- paste0("mu",index)
     }
 }
-setwd("C:/Users/Roi Maor/Desktop/2nd Chapter/DivRates/MuHiSSE/Output")
+#setwd("C:/Users/Roi Maor/Desktop/2nd Chapter/DivRates/MuHiSSE/Output")
 #write.csv(div, file="Raw Rates of Evolution.csv", row.names = TRUE)
 
 
@@ -565,6 +565,8 @@ tbr1 <- Trates[which(Trates$model != "vrMuHiSSE4_MCCtree"),] # exclude MCCtree
 tbr2 <- tbr1[which(tbr1$rclass == "character change"),]        # exclude hidden rates
 tbr3 <- tbr2[which(tbr2$modtype == 3),]
 tbr4 <- tbr2[which(tbr2$modtype == 4),]
+tbr5 <- tbr2
+tbr5[which(tbr5$value < 10^-6),3] <- 10^-6
 
 # plot transition rate estimates
 pdf(file="Transition rates estimate.pdf", width = 10, height = 7)
@@ -586,8 +588,22 @@ ggplot(transform(tbr2, rtype=factor(rtype, levels=c("N->C","C->N","C->D","D->C")
     #scale_y_continuous(limits = c(0, .03)) 
 dev.off()
 
+####################
+** TODO:
+    looking what happens when I round down all rates smaller than 10^-6 to zero
+###################
 
 
+# looking what happens when I omit worst performing models (based on BIC)
+mods <- unique(Trates$model)
+for (mod in unique(Trates$model)){
+    if(str_sub(mod, start = -4L, end = -1L) %in% c("8981","5221","0028","5455","2966","5333","3865")){
+        mods <- mods[-which(mods == mod)]
+    }
+}
+NEWrates <- Trates[which(Trates$model %in% mods),]
+nr1 <- NEWrates[which(NEWrates$model != "vrMuHiSSE4_MCCtree"),] # exclude MCCtree
+nr2 <- nr1[which(nr1$rclass == "character change"),]  
 
 TODO:
     ##  *** try MarginReconMuHiSSE() and use the output for 
@@ -615,7 +631,6 @@ all_rates <- melt(div_rate, id.vars = c("model","npar"), measure.vars = colnames
 # 3. Follow up analyses -------------------------------------------------------
 library("hisse")
 # 3.1 Reconstruction based on fitted models -----------------------------------
-TODO: extract parameters from estimated models
 
 mod <- readRDS(file="MuHiSSE2_tree6404.RDS")
 parest <- SupportRegionMuHiSSE(mod, n.points=1000, scale.int=0.1, desired.delta=2, min.number.points=10, verbose=TRUE)
@@ -745,27 +760,6 @@ dev.off()
 
 #pdf(file = "Model support by no. of states.pdf", width = 7, height = 8.5)
 #library(ggridges)
-
-## code for this figure adapted from: https://ourcodingclub.github.io/tutorials/dataviz-beautification-synthesis/#distributions 
-# This code loads the function in the working environment
-source("https://gist.githubusercontent.com/benmarwick/2a1bb0133ff568cbe28d/raw/fb53bd97121f7f9ce947837ef1a4c65a73bffb3f/geom_flat_violin.R")
-# theme from: https://neuroconscience.wordpress.com/2018/03/15/introducing-raincloud-plots/
-
-raincloud_theme = theme(
-    text = element_text(size = 10),
-    axis.title.x = element_text(size = 16),
-    axis.title.y = element_text(size = 16),
-    axis.text = element_text(size = 14),
-    axis.text.x = element_text(angle = 45, vjust = 0.5),
-    legend.title=element_text(size=16),
-    legend.text=element_text(size=16),
-    legend.position = "right",
-    plot.title = element_text(lineheight=.8, face="bold", size = 16),
-    panel.border = element_blank(),
-    panel.grid.minor = element_blank(),
-    panel.grid.major = element_blank(),
-    axis.line.x = element_line(colour = 'black', size=0.5, linetype='solid'),
-    axis.line.y = element_line(colour = 'black', size=0.5, linetype='solid'))
 
 # plotting support by no. states, aggregaetd over all variants
 vars <- score[-which(score$tree == "MCC"),]
