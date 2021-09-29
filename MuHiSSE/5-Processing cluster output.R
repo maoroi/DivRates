@@ -499,29 +499,22 @@ tb1 <- evo[which(evo$model != "vrMuHiSSE4_MCCtree"),] # exclude MCCtree
 tb2 <- tb1[which(tb1$modtype == 3),] # only 3-state models
 tb3 <- tb1[which(tb1$modtype == 4),] # only 4-state models
 
-#png(file="Evolutionary rates estimate.png", width = 1600, height = 1200)
 pdf(file="Evolutionary rates estimate.pdf", width = 14, height = 8)
+# reorder to put speciation before extinction
+tb1$rtype <- factor(tb1$rtype, levels = c("s00","s01","s11","mu00","mu01","mu11","lambda00","lambda01","lambda11"))
 ggplot(tb1, aes(x = rtype, y = value)) +
     geom_flat_violin(aes(fill = AP), position = position_nudge(x = .15, y = 0), alpha = .8) +
-    geom_point(aes(fill = AP), position = position_jitter(width = .1), shape = 21, size = 3, alpha = 0.6) +
-    geom_boxplot(width = .15, outlier.shape = NA, alpha = 0.7) +
+    geom_point(aes(fill = AP), position = position_jitter(width = .1), shape = 21, size = 2, alpha = 0.3) + #
+    geom_boxplot(aes(fill = AP), width = .15, outlier.shape = NA, alpha = 0.6) +
     theme_light() +
-    theme(axis.text.x = element_text(angle = 80, vjust = 1, hjust = 1)) +
-    facet_wrap(~modtype) + 
-    scale_fill_manual(values = cols <- c("green3","gold2","blue")) +
-    # the below line is used for coloring boxplots by AP
-    #scale_colour_manual(values = c("green3","gold2","blue","blue")) + # no idea why 4 colours are needed, but 3 don't work
-    guides(fill = FALSE, color = FALSE)
-
-ggplot(tb1, aes(x = rtype, y = value)) +
-    geom_flat_violin(aes(fill = AP), position = position_nudge(x = .15, y = 0), alpha = .8) +
-    geom_point(aes(fill = AP), position = position_jitter(width = .1), shape = 21, size = 3, alpha = 0.6) +
-    geom_boxplot(width = .15, outlier.shape = NA, alpha = 0.7) +
-    theme_light() +
-    theme(axis.text.x = element_text(angle = 80, vjust = 1, hjust = 1)) +
-    facet_wrap(~modtype) + 
-    scale_fill_manual(values = cols <- c("green3","gold2","blue")) +
-    guides(fill = FALSE, color = FALSE)
+    theme(axis.text.x = element_text(vjust = 1, hjust = 0.5)) + #angle = 80, 
+    #facet_wrap(~type) + 
+    scale_fill_manual(values = cols <- c("green3","gold2","dodgerblue3"))+#,"grey")) +
+    # the below line should be used for coloring boxplots by AP with the argument 'colour='
+    #scale_colour_manual(values = c("green3","gold2","blue"))+#,"blue")) +
+    guides(fill = FALSE, color = FALSE) +
+    geom_rect(aes(xmin = 7 - 0.3, xmax = 9 + 0.55, ymin = 0 - 0.05, ymax = max(value) + 0.1),
+          fill = "transparent", color = "red", size = 1.5)
 dev.off()
     
 tb1 %>% group_by(state) %>% tally()
