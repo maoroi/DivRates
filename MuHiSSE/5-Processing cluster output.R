@@ -509,9 +509,9 @@ ggplot(tb1, aes(x = rtype, y = value)) +
     theme_light() +
     theme(axis.text.x = element_text(vjust = 1, hjust = 0.5)) + #angle = 80, 
     #facet_wrap(~type) + 
-    scale_fill_manual(values = cols <- c("green3","gold2","dodgerblue3"))+#,"grey")) +
+    scale_fill_manual(values = cols <- c("#33DD00","#FFCC00","#2233FF"))+#,"grey")) +
     # the below line should be used for coloring boxplots by AP with the argument 'colour='
-    #scale_colour_manual(values = c("green3","gold2","blue"))+#,"blue")) +
+    #scale_colour_manual(values = c("green3","gold2","dodgerblue3"))+#,"blue")) +
     guides(fill = FALSE, color = FALSE) +
     geom_rect(aes(xmin = 7 - 0.3, xmax = 9 + 0.55, ymin = 0 - 0.05, ymax = max(value) + 0.1),
           fill = "transparent", color = "red", size = 1.5)
@@ -559,11 +559,12 @@ tbr2 <- tbr1[which(tbr1$rclass == "character change"),]        # exclude hidden 
 tbr3 <- tbr2[which(tbr2$modtype == 3),]
 tbr4 <- tbr2[which(tbr2$modtype == 4),]
 tbr5 <- tbr2
-tbr5[which(tbr5$value < 10^-6),3] <- 10^-6
+tbr5[which(tbr5$value < 10^-6),3] <- 10^-6 # 10^-6 < 1/(total tree depth * total number of lineages)
+# rates below this threshold are not expected to be detectable given this amount of data
 
 # plot transition rate estimates
 pdf(file="Transition rates estimate.pdf", width = 10, height = 7)
-ggplot(transform(tbr2, rtype=factor(rtype, levels=c("N->C","C->N","C->D","D->C"))),
+ggplot(transform(tbr5, rtype=factor(rtype, levels=c("N->C","C->N","C->D","D->C"))),
        aes(x = rtype, y = log(value), fill = as.factor(rtype))) +
     #ggplot(tbr2, aes(x = rtype, y = log(value), fill = as.factor(rtype))) +
     geom_flat_violin(position = position_nudge(x = .2, y = 0), alpha = .8) +
@@ -573,7 +574,7 @@ ggplot(transform(tbr2, rtype=factor(rtype, levels=c("N->C","C->N","C->D","D->C")
     theme_light() +
     #facet_wrap(~modtype) +
     theme(axis.text.x = element_text(vjust = 1, hjust = 1)) +
-    scale_fill_manual(values = cols <- c("#5A4A6F","#E47250","gold1","dodgerblue3")) +
+    scale_fill_manual(values = cols <- c("#AA22BB","#EE4444","gold1","#44DDFF")) +
     scale_colour_manual(values = c("#5A4A6F", "#E47250",  "#EBB261", "#9D5A6C","#5A4A6F", "#E47250",  "#EBB261", "#9D5A6C")) +
     labs(y = "log(transition rate)", x = "Transition type (from -> to)") +
     guides(fill = FALSE, color = FALSE) #+
