@@ -582,10 +582,6 @@ ggplot(transform(tbr5, rtype=factor(rtype, levels=c("N->C","C->N","C->D","D->C")
     #scale_y_continuous(limits = c(0, .03)) 
 dev.off()
 
-####################
-** TODO:
-    looking what happens when I round down all rates smaller than 10^-6 to zero
-###################
 
 
 # looking what happens when I omit worst performing models (based on BIC)
