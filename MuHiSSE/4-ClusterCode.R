@@ -667,7 +667,7 @@ tmp <- MuHiSSE(phy=tree, data=states_trans, f=freq,
     }
     
 
-    ## 3.2 Generate files for the 12 tree variants -----------------------------
+    ## 3.2 Generate files for the tree variants -------------------------------
     
     for (k in 1:length(tree_no)){
         

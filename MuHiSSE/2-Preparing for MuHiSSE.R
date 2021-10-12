@@ -40,6 +40,10 @@ force.ultrametric <- function(tree,method=c("nnls","extend")){
     tree
 }
 
+# loading activity data here to enable the following function
+read.csv("ActivityData_MDD_v1.csv") -> data   # file made in "1-Updating taxonomy.r"
+
+
 # automatically correct tip names to match taxonomy - requires the data file loaded (based on section 1.4 below)
 CorTax <- function(tree){
     tree$tip.label[which(tree$tip.label == "Equus_africanus")]  <- "Equus_asinus"   # asinus is domestic E. africanus
@@ -104,7 +108,6 @@ for (j in 1:length(vars)){
 }
 
 # * 3 Activity data  ------------------------------------------------------
-read.csv("ActivityData_MDD_v1.csv") -> data   # see file "Uploading taxonomy.r" for how this file was made
 
 # making sure names in data and in tree match
 # checks below use the "%in%" syntax becasue setdiff() returns unique entries only, messing up the totals 
