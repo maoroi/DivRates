@@ -13,7 +13,8 @@ extRDS_par <- function(file){
     tmp <- readRDS(file)
     res <- tmp$solution
 }
-setwd("C:/Users/Roi Maor/Desktop/2nd Chapter/DivRates/MuHiSSE/Analyses/ResultsCluster")
+#setwd("C:/Users/Roi Maor/Desktop/2nd Chapter/DivRates/MuHiSSE/Analyses/ResultsCluster")
+setwd("C:/Users/Roi Maor/Desktop/2nd Chapter/DivRates/MuHiSSE/Analyses/Additional")
 
 # extract the first 3 elements of each model into a data frame
 allmods <- list.files(pattern = ".RDS")
@@ -65,6 +66,11 @@ for (i in 1:nrow(score)){
 
 tert <- score[which(score$type %in% c("CID","MuHiSSE","vrCID","vrMuHiSSE")),]
 
+# finding which trees don't have MuHiSSE4 results (exceeded time limit on cluster)
+#Mu4 <- score[which(score$type == "vrMuHiSSE" & score$states == 4),]
+#Mu3 <- score[which(score$type == "vrMuHiSSE" & score$states == 3),]
+#Mu3$tree[which(!Mu3$tree %in% Mu4$tree)]
+#[1] "0647" "1805" "2316" "4420" "4423" "5039" "5568" "6747" "6774" "8394"
 
 ## 1.2 Model selection ---------------------------------------------------------
 
@@ -118,7 +124,7 @@ ggplot(df1, aes(x = reorder(tree, AICc, FUN = min), y = AICc, colour = as.factor
     geom_point(data = df2, aes(tree, AICc), colour = 'red', shape = 1, size = 3) + 
     facet_wrap(~type) + 
     theme_light() +
-    theme(axis.text.x = element_text(angle = 80, vjust = 1, hjust = 1)) +
+    theme(axis.text.x = element_text(angle = 90, vjust = 1, hjust = 1)) +
     labs(color = "States") +
     xlab("Tree variant (reordered for visualisation)") +
     scale_color_viridis_d(option = "viridis", begin = .15, end = 1, alpha = 1, direction = -1) +
@@ -129,7 +135,7 @@ ggplot(df1, aes(x = reorder(tree, BIC, FUN = min), y = BIC, colour = as.factor(s
     geom_point(data = df2, aes(tree, BIC), colour = 'red', shape = 1, size = 3) + 
     facet_wrap(~type) + 
     theme_light() +
-    theme(axis.text.x = element_text(angle = 80, vjust = 1, hjust = 1)) +
+    theme(axis.text.x = element_text(angle = 90, vjust = 1, hjust = 1, size = 5)) +
     labs(color = "States") +
     xlab("Tree variant (reordered for visualisation)") +
     scale_color_viridis_d(option = "inferno", begin = .1, end = .9, alpha = 1) +
