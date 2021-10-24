@@ -1,4 +1,5 @@
 library(phytools)
+setwd("C:/Users/Roi Maor/Desktop/2nd Chapter/DivRates/MuHiSSE")
 
 # 1. Preliminary data ---------------------------------------------------------
 # (this is a randomisation section and, to save resources, doesn't have to be re-run every time) 
@@ -55,10 +56,17 @@ for (i in 1:length(tree_no)){
     write.tree(treevar, file=paste0('tree',tree_no[i],'.nex'))
 }
 
-dir.create(file.path("./Analyses/Additional"))   # directory for additional analyses
+# get all additional tree names
+files <- list.files(pattern = "tree....\\.nex$") # list all tree****.nex files
+used <- paste0("tree",used,".nex")
+files <- files[!files %in% used]
+fnames <- 1:100
+for (i in 1:length(files)){
+    fnames[i] <- strsplit(files[i], "\\.")[[1]][1]
+}
 
-## create MuHiSSE/Additional directory on Myriad
-## move the input files to correct location
+
+dir.create(file.path("./Analyses/Additional"))   # directory for additional analyses
 
 for (n in 1:4){
     for (k in 1:length(tree_no)){
