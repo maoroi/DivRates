@@ -13,7 +13,9 @@ extRDS_par <- function(file){
     tmp <- readRDS(file)
     res <- tmp$solution
 }
-#setwd("C:/Users/Roi Maor/Desktop/2nd Chapter/DivRates/MuHiSSE/Analyses/ResultsCluster")
+
+# place all .RDS files in one folder to eliminate this duplicity
+setwd("C:/Users/Roi Maor/Desktop/2nd Chapter/DivRates/MuHiSSE/Analyses/ResultsCluster")
 setwd("C:/Users/Roi Maor/Desktop/2nd Chapter/DivRates/MuHiSSE/Analyses/Additional")
 
 # extract the first 3 elements of each model into a data frame
@@ -74,22 +76,26 @@ tert <- score[which(score$type %in% c("CID","MuHiSSE","vrCID","vrMuHiSSE")),]
 
 ## 1.2 Model selection ---------------------------------------------------------
 
-# model selection by AICc and BIC
-ordA <- tert[order(tert$AICc),]
-ordA <- ordA[,c("tree","type","states","loglik","npar","AIC","AICc","BIC")]
-ordB <- tert[order(tert$BIC),]
-ordB <- ordB[,c("tree","type","states","loglik","npar","AIC","AICc","BIC")]
+ord <- tert
+# ordering by AICc or BIC
+#ordA <- tert[order(tert$AICc),]
+#ordA <- ordA[,c("tree","type","states","loglik","npar","AIC","AICc","BIC")]
+#ordB <- tert[order(tert$BIC),]
+#ordB <- ordB[,c("tree","type","states","loglik","npar","AIC","AICc","BIC")]
 
 ordbyt <- data.frame()
 # calculate delta AICc/BIC for each tree
-for (z in unique(ordA$tree)) {
-    dat <- ordA[which(ordA$tree == z),]
-    dat <- dat[order(dat$AICc),]
-    dat$diff_AIC <- dat$AICc - min(dat$AICc)
-    dat$rel_lik <- exp(-0.5 * dat$diff_AIC)
+for (z in unique(ord$tree)) {
+    dat <- ord[which(ord$tree == z),]
+    #dat <- dat[order(dat$AICc),]
+    dat$diff_AICc <- dat$AICc - min(dat$AICc)
+    dat$rel_lik <- exp(-0.5 * dat$diff_AICc)
     dat$weight <- dat$rel_lik / sum(dat$rel_lik) # this is identical to rel_lik on most trees
-    ordbyt <- rbind(ordbyt, dat[order(dat$diff_AIC, decreasing = FALSE),])
+    dat$diff_BIC <- dat$BIC - min(dat$BIC)
+    ordbyt <- rbind(ordbyt, dat[order(dat$diff_AICc, decreasing = FALSE),])
 }
+
+
 ordbytA <- ordbyt[order(ordbyt$tree, ordbyt$AICc),]
 
 # and again for BIC:
@@ -124,7 +130,7 @@ ggplot(df1, aes(x = reorder(tree, AICc, FUN = min), y = AICc, colour = as.factor
     geom_point(data = df2, aes(tree, AICc), colour = 'red', shape = 1, size = 3) + 
     facet_wrap(~type) + 
     theme_light() +
-    theme(axis.text.x = element_text(angle = 90, vjust = 1, hjust = 1)) +
+    theme(axis.text.x = element_text(angle = 90, vjust = 1, hjust = 1, size = 5)) +
     labs(color = "States") +
     xlab("Tree variant (reordered for visualisation)") +
     scale_color_viridis_d(option = "viridis", begin = .15, end = 1, alpha = 1, direction = -1) +
@@ -142,26 +148,27 @@ ggplot(df1, aes(x = reorder(tree, BIC, FUN = min), y = BIC, colour = as.factor(s
     scale_fill_viridis_d(option = "inferno", begin = .1, end = .9, alpha = 0.5)
 dev.off()
 
-df3 <- tert[tert$states == 1,]
-pdf(file = "Model support unordered.pdf",width = 10, height = 10)  #png(file = "likelihood by model type.png",width = 7, height = 8.5, units = "in", res=800)
-ggplot(tert) +
-    geom_point(aes(x=tree, AICc, colour = as.factor(states)), alpha= .8, size = 2) + # use: "reorder(tree, -loglik, FUN = mean)" instead of "tree" to order trees by loglik
-    geom_point(data = df3, aes(tree, AICc), colour = 'grey20', shape = 1, size = 2) + 
-    theme_light() +
-    theme(axis.text.x = element_text(angle = 80, vjust = 1, hjust = 1)) +
-    labs(color = "States") +
-    facet_wrap(~type) + #, nrow = 1) + 
-    scale_color_viridis_d(option = "viridis", begin = .1, end = .9, direction = -1)
-
-ggplot(tert) +
-    geom_point(aes(x=tree, BIC, colour = as.factor(states)), alpha= .8, size = 2) + # use: "reorder(tree, -loglik, FUN = mean)" instead of "tree" to order trees by loglik
-    geom_point(data = df3, aes(tree, BIC), colour = 'grey20', shape = 1, size = 2) + 
-    theme_light() +
-    theme(axis.text.x = element_text(angle = 80, vjust = 1, hjust = 1)) +
-    labs(color = "States") +
-    facet_wrap(~type) + #, nrow = 1) + 
-    scale_color_viridis_d(option = "inferno", begin = .1, end = .9, direction = -1)
-dev.off()
+# same plot as above but trees not ordered
+#df3 <- tert[tert$states == 1,]
+#pdf(file = "Model support unordered.pdf",width = 10, height = 10)  #png(file = "likelihood by model type.png",width = 7, height = 8.5, units = "in", res=800)
+#ggplot(tert) +
+#    geom_point(aes(x=tree, AICc, colour = as.factor(states)), alpha= .8, size = 2) + # use: "reorder(tree, -loglik, FUN = mean)" instead of "tree" to order trees by loglik
+#    geom_point(data = df3, aes(tree, AICc), colour = 'grey20', shape = 1, size = 2) + 
+#    theme_light() +
+#    theme(axis.text.x = element_text(angle = 80, vjust = 1, hjust = 1)) +
+#    labs(color = "States") +
+#    facet_wrap(~type) + #, nrow = 1) + 
+#    scale_color_viridis_d(option = "viridis", begin = .1, end = .9, direction = -1)
+#
+#ggplot(tert) +
+#    geom_point(aes(x=tree, BIC, colour = as.factor(states)), alpha= .8, size = 2) + # use: "reorder(tree, -loglik, FUN = mean)" instead of "tree" to order trees by loglik
+#    geom_point(data = df3, aes(tree, BIC), colour = 'grey20', shape = 1, size = 2) + 
+#    theme_light() +
+#    theme(axis.text.x = element_text(angle = 80, vjust = 1, hjust = 1)) +
+#    labs(color = "States") +
+#    facet_wrap(~type) + #, nrow = 1) + 
+#    scale_color_viridis_d(option = "inferno", begin = .1, end = .9, direction = -1)
+#dev.off()
 
 #pdf(file = "Model support by no. of states.pdf", width = 7, height = 8.5)
 #library(ggridges)
@@ -209,9 +216,13 @@ raincloud_theme = theme(
     axis.line.x = element_line(colour = 'black', size=0.5, linetype='solid'),
     axis.line.y = element_line(colour = 'black', size=0.5, linetype='solid'))
 
-vars <- tert[which(tert$tree != "MCC"),]
+vars <- ordbyt[which(ordbyt$tree != "MCC"),]
 vr <- vars[which(vars$type %in% c("vrCID", "vrMuHiSSE")),]
-vr <- vr[-which(vr$states == 6),]
+
+vr2 <- filter(vars, type %in% c("vrCID", "vrMuHiSSE")) %>%
+    filter(states != 6) %>%
+    filter(diff_BIC != 0)
+vr4 <- filter(vars, diff_BIC == 0)
 
 #vrci <- vars[which(vars$type == "vrCID"),]
 #vrsse <- vars[(which(vars$type == "vrMuHiSSE")),]
@@ -244,12 +255,12 @@ vr <- vr[-which(vr$states == 6),]
    
 # plotting support by no. states, aggregaetd over all variants
 pdf(file = "Model support VR aggregated.pdf", width = 8.5, height = 6)
-ggplot(data = vr, aes(y = AICc, x = as.factor(states), fill = as.factor(states))) +
+ggplot(data = vr, aes(y = diff_AICc, x = as.factor(states), fill = as.factor(states))) +
     geom_flat_violin(position = position_nudge(x = .2, y = 0), alpha = .8) +
-    geom_point(aes(y = AICc, x = as.factor(states), color = as.factor(states)), 
+    geom_point(aes(y = diff_AICc, x = as.factor(states), color = as.factor(states)), 
                position = position_jitter(width = .1), size = 3, alpha = 0.6) +
     geom_boxplot(width = .15, outlier.shape = NA, alpha = 0.6) +
-    guides(fill = FALSE, color = FALSE) + # don't show a legend
+    guides(fill = "none", color = "none") + # don't show a legend
     #labs(color = "States", fill = "States") + # in case a legend is needed
     xlab("No. of states") +
     facet_wrap(~type,) +
@@ -262,9 +273,9 @@ ggplot(data = vr, aes(y = AICc, x = as.factor(states), fill = as.factor(states))
     #scale_colour_manual(values = c("#5A4A6F", "#E47250",  "#EBB261", "#9D5A6E")) +
     theme_minimal(base_size = 12) 
 
-ggplot(data = vr, aes(y = BIC, x = as.factor(states), fill = as.factor(states))) +
+ggplot(data = vr, aes(y = diff_BIC, x = as.factor(states), fill = as.factor(states))) +
     geom_flat_violin(position = position_nudge(x = .2, y = 0), alpha = .8) +
-    geom_point(aes(y = BIC, x = as.factor(states), color = as.factor(states)), 
+    geom_point(aes(y = diff_BIC, x = as.factor(states), color = as.factor(states)), 
                position = position_jitter(width = .1), size = 3, alpha = 0.6) +
     geom_boxplot(width = .15, outlier.shape = NA, alpha = 0.6) +
     guides(fill = FALSE, color = FALSE) + # don't show a legend
