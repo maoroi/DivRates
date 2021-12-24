@@ -16,7 +16,7 @@ extRDS_par <- function(file){
 
 # place all .RDS files in one folder to eliminate this duplicity
 setwd("C:/Users/Roi Maor/Desktop/2nd Chapter/DivRates/MuHiSSE/Analyses/ResultsCluster")
-setwd("C:/Users/Roi Maor/Desktop/2nd Chapter/DivRates/MuHiSSE/Analyses/Additional")
+#setwd("C:/Users/Roi Maor/Desktop/2nd Chapter/DivRates/MuHiSSE/Analyses/Additional")
 
 # extract the first 3 elements of each model into a data frame
 allmods <- list.files(pattern = ".RDS")
@@ -27,14 +27,10 @@ allmods <- list.files(pattern = ".RDS")
 modat <- data.frame(t(sapply(allmods, extRDS)))
 score <- as.data.frame(do.call(cbind, lapply(modat[,1:3], as.numeric)))
 rownames(score) <- rownames(modat)
-score$BIC <- NA
-score$type <- NA
-score$states <- NA
-score$npar <- NA
-score$tree <- NA
+score$tree <- score$npar <- score$states <- score$type <- score$BIC <- NA
 
 
-## 1.1 Extract model parameters ------------------------------------------------
+## 1.1 Extract model parameters -----------------------------------------------
 # extracting model parameters from file name
 for (i in 1:nrow(score)){
     score$type[i] <- gsub("[0-9]", "", strsplit(rownames(score[i,]),"_")[[1]][1])       # model type
@@ -84,25 +80,22 @@ ord <- tert
 #ordB <- ordB[,c("tree","type","states","loglik","npar","AIC","AICc","BIC")]
 
 ordbyt <- data.frame()
-# calculate delta AICc/BIC for each tree
+# calculate relative model support (delta AICc) for each tree
 for (z in unique(ord$tree)) {
     dat <- ord[which(ord$tree == z),]
     #dat <- dat[order(dat$AICc),]
     dat$diff_AICc <- dat$AICc - min(dat$AICc)
     dat$rel_lik <- exp(-0.5 * dat$diff_AICc)
     dat$weight <- dat$rel_lik / sum(dat$rel_lik) # this is identical to rel_lik on most trees
-    dat$diff_BIC <- dat$BIC - min(dat$BIC)
+    dat$diff_AICc <- dat$AICc - min(dat$AICc)
     ordbyt <- rbind(ordbyt, dat[order(dat$diff_AICc, decreasing = FALSE),])
 }
-
-
 ordbytA <- ordbyt[order(ordbyt$tree, ordbyt$AICc),]
 
-# and again for BIC:
+# and again for BIC
 ordbyt <- data.frame()
-# calculate relative model support for each tree
-for (z in unique(ordB$tree)) {
-    dat <- ordB[which(ordB$tree == z),]
+for (z in unique(ord$tree)) {
+    dat <- ord[which(ord$tree == z),]
     dat <- dat[order(dat$BIC),]
     dat$diff_BIC <- dat$BIC - min(dat$BIC)
     dat$rel_lik <- exp(-0.5 * dat$diff_BIC)
@@ -121,7 +114,7 @@ setwd("C:/Users/Roi Maor/Desktop/2nd Chapter/DivRates/MuHiSSE/Output")
 ## plotting likelihood as function of tree variant and model type
 
 # comparing all models by BIC, divided to model type and no. of states, grouped by tree
-pdf(file="Model support ordered_MCC marked.pdf", width = 10, height = 8)
+pdf(file="Model support ordered_MCC marked.pdf", width = 15, height = 10)
 df1 <- tert[tert$states != 1,]
 df2 <- subset(df1, df1$tree =="MCC")    # get only MCC models separately
 #par(mfrow=c(2,1))
@@ -216,8 +209,11 @@ raincloud_theme = theme(
     axis.line.x = element_line(colour = 'black', size=0.5, linetype='solid'),
     axis.line.y = element_line(colour = 'black', size=0.5, linetype='solid'))
 
-vars <- ordbyt[which(ordbyt$tree != "MCC"),]
-vr <- vars[which(vars$type %in% c("vrCID", "vrMuHiSSE")),]
+## plotting support by no. states, aggregaetd over all variants
+varsA <- ordbytA[which(ordbytA$tree != "MCC"),]
+varsB <- ordbytB[which(ordbytB$tree != "MCC"),]
+vrA <- varsA[which(varsA$type %in% c("vrCID", "vrMuHiSSE")),]
+vrB <- varsB[which(varsB$type %in% c("vrCID", "vrMuHiSSE")),]
 
 vr2 <- filter(vars, type %in% c("vrCID", "vrMuHiSSE")) %>%
     filter(states != 6) %>%
@@ -253,9 +249,8 @@ vr4 <- filter(vars, diff_BIC == 0)
 #    scale_fill_manual(values = c("#5A4A6F", "#E47250",  "#EBB261", "#9D5A6C","2CD11E")) +
 #    scale_colour_manual(values = c("#5A4A6F", "#E47250",  "#EBB261", "#9D5A6C","2CD11E")) 
    
-# plotting support by no. states, aggregaetd over all variants
-pdf(file = "Model support VR aggregated.pdf", width = 8.5, height = 6)
-ggplot(data = vr, aes(y = diff_AICc, x = as.factor(states), fill = as.factor(states))) +
+pdf(file = "VR models relative support.pdf", width = 15, height = 10)
+ggplot(data = vrA, aes(y = diff_AICc, x = as.factor(states), fill = as.factor(states))) +
     geom_flat_violin(position = position_nudge(x = .2, y = 0), alpha = .8) +
     geom_point(aes(y = diff_AICc, x = as.factor(states), color = as.factor(states)), 
                position = position_jitter(width = .1), size = 3, alpha = 0.6) +
@@ -273,44 +268,42 @@ ggplot(data = vr, aes(y = diff_AICc, x = as.factor(states), fill = as.factor(sta
     #scale_colour_manual(values = c("#5A4A6F", "#E47250",  "#EBB261", "#9D5A6E")) +
     theme_minimal(base_size = 12) 
 
-ggplot(data = vr, aes(y = diff_BIC, x = as.factor(states), fill = as.factor(states))) +
+ggplot(data = vrB, aes(y = diff_BIC, x = as.factor(states), fill = as.factor(states))) +
     geom_flat_violin(position = position_nudge(x = .2, y = 0), alpha = .8) +
     geom_point(aes(y = diff_BIC, x = as.factor(states), color = as.factor(states)), 
                position = position_jitter(width = .1), size = 3, alpha = 0.6) +
     geom_boxplot(width = .15, outlier.shape = NA, alpha = 0.6) +
-    guides(fill = FALSE, color = FALSE) + # don't show a legend
+    guides(fill = "none", color = "none") + # don't show a legend
     #labs(color = "States", fill = "States") + # in case a legend is needed
     xlab("No. of states") +
     facet_wrap(~type,) +
     expand_limits(x = 5.25) +
-    #scale_color_brewer(palette = "Spectral") +
-    #scale_fill_brewer(palette = "Spectral") +
     scale_fill_viridis_d(option = "inferno", begin = 0.1, end = 0.9, alpha = 0.8, direction = -1) +
     scale_color_viridis_d(option = "inferno", begin = 0.1, end = 0.9, alpha = 1, direction = -1) +
-    #scale_fill_manual(values = c("#5A4A6F", "#E47250",  "#EBB261", "#9D5A6E")) + #, "2CD11E")) +
-    #scale_colour_manual(values = c("#5A4A6F", "#E47250",  "#EBB261", "#9D5A6E")) + #, "2CD11E")) +
     theme_minimal(base_size = 12) 
 dev.off()
 
 # plotting support by no. states with trendlines to show that the pattern is uniform accross trees
 pdf(file = "Model support by states_tree-trendlines.pdf", width = 7, height = 8.5)
-ggplot(vars,aes(x=states, AICc, colour = reorder(tree, AICc, FUN = mean), group = tree)) +
+ggplot(varsA,aes(x=states, AICc, colour = reorder(tree, AICc, FUN = mean), group = tree)) +
     geom_point(alpha= .5, size = 2) +
     # use the below if need to plot MCC along with tree variants
     #geom_point(data = tert[tert$tree == "MCC",], aes(states, AICc), colour = 'grey10', shape = 4, size = 2) + 
     geom_line() +
     theme(axis.text.x = element_text(angle = 80, vjust = 1, hjust = 1)) +
-    labs(color = "Tree variant") +
+    guides(fill = "none", color = "none") + # don't show a legend
+    #labs(color = "Tree variant") +
     facet_wrap(~type,) + 
     scale_color_viridis_d(option = "turbo", alpha = .5, direction = -1)
 
-ggplot(vars,aes(x=states, BIC, colour = reorder(tree, BIC, FUN = mean), group = tree)) +
+ggplot(varsB,aes(x=states, BIC, colour = reorder(tree, BIC, FUN = mean), group = tree)) +
     geom_point(alpha= .5, size = 2) +
     # use the below if need to plot MCC along with tree variants
     #geom_point(data = tert[tert$tree == "MCC",], aes(states, BIC), colour = 'grey10', shape = 4, size = 2) + 
     geom_line() +
     theme(axis.text.x = element_text(angle = 80, vjust = 1, hjust = 1)) +
-    labs(color = "Tree variant") +
+    guides(fill = "none", color = "none") + # don't show a legend
+    #labs(color = "Tree variant") +
     facet_wrap(~type,) + 
     scale_color_viridis_d(option = "turbo", alpha = .5, direction = -1)
 dev.off()
@@ -332,22 +325,51 @@ dev.off()
 #dev.off()
 
 # comparing model type performance
-pdf(file="model type performance by tree.pdf", width = 10, height = 8)
+pdf(file="model type performance by tree.pdf", width = 15, height = 10)
 ggplot(ordbytA, aes(x=states, AICc, colour = type, group=type)) +
     geom_point(alpha= .5, size = 3) + 
     geom_line(size = 1.5, alpha = 0.5) +
     theme_light() +
-    facet_wrap(~tree, nrow = 5) + 
+    facet_wrap(~tree, nrow = 6) + 
     scale_color_viridis_d(option = "viridis", #inferno, turbo, mako
                           begin = 0, end = .95, direction = -1)
+
 ggplot(ordbytB, aes(x=states, BIC, colour = type, group=type)) +
     geom_point(alpha= .5, size = 3) +  
     geom_line(size = 1.5, alpha = 0.5) +
     theme_light() +
-    facet_wrap(~tree, nrow = 5) + 
+    facet_wrap(~tree, nrow = 6) + 
     scale_color_viridis_d(option = "inferno", #inferno, turbo, mako
                           begin = 0, end = .9, direction = -1)
 dev.off()
+
+
+# same as above but trees ordered by BIC
+srd <- ordbytB[order(ordbytB$BIC),] 
+sru <- unique(srd$tree)
+for(i in 1:nrow(ordbytB)){ordbytB$ordBIC[i] <- which(sru == ordbytB$tree[i])}
+
+# this code works, but tree labels are gone
+ggplot(ordbytB, aes(x=states, BIC, colour = type, group=type)) +
+    geom_point(alpha= .5, size = 3) +  
+    geom_line(size = 1.5, alpha = 0.5) +
+    theme_light() +
+    #facet_grid(ordBIC ~ ., labeller=tree_labeller) +
+    facet_wrap(~ordBIC, nrow = 6) + 
+    scale_color_viridis_d(option = "inferno", #inferno, turbo, mako
+                          begin = 0, end = .9, direction = -1)
+
+
+## quick tally - which trees support MuHiSSE3 better than MuHiSSE2 and MuHiSSE4
+trees <- data.frame(sru)
+trees$best <- NA
+# make a table of all the best models
+for(t in unique(ordbytB$tree)){
+    mods <- ordbytB[which(ordbytB$tree == t),]
+    best <- mods[which(mods$BIC == min(mods$BIC)),]
+    trees$best[which(trees$sru == t)] <- paste0(best$type,best$states)
+}
+table(trees$best)
 
 # comparing likelihood of all models, divided to trees and no. of states, grouped by model type
 #pdf(file="likelihood by trees.pdf", width = 10, height = 8)
@@ -400,7 +422,7 @@ for (i in colnames(params)) {
     }
 }
 #setwd("C:/Users/Roi Maor/Desktop/2nd Chapter/DivRates/MuHiSSE/Output")
-#write.csv(div, file="Raw Rates of Evolution.csv", row.names = TRUE)
+#write.csv(div, file="Raw Rates of Evolution_125trees.csv", row.names = TRUE)
 
 
 ## 2.2 Obtain parameter estimates from averaging supported models -------------
