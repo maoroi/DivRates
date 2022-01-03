@@ -65,11 +65,11 @@ for (i in 1:nrow(score)){
 
 tert <- score[which(score$type %in% c("CID","MuHiSSE","vrCID","vrMuHiSSE")),]
 
-# finding which trees don't have MuHiSSE4 results (exceeded time limit on cluster)
+# finding which trees don't have MuHiSSE4 results (timed out on cluster)
 #Mu4 <- score[which(score$type == "vrMuHiSSE" & score$states == 4),]
 #Mu3 <- score[which(score$type == "vrMuHiSSE" & score$states == 3),]
 #Mu3$tree[which(!Mu3$tree %in% Mu4$tree)]
-#[1] "4420" "6747" "6774" "8394"
+#[1] "4420" "6747" "8394"
 
 ## 1.2 Model selection ---------------------------------------------------------
 
@@ -121,25 +121,28 @@ df2 <- subset(df1, df1$tree =="MCC")    # get only MCC models separately
 #par(mfrow=c(2,1))
 ggplot(df1, aes(x = reorder(tree, AICc, FUN = min), y = AICc, colour = as.factor(states))) +
     geom_point(alpha= .75, size = 3) + 
-    geom_point(data = df2, aes(tree, AICc), colour = 'red', shape = 1, size = 3) + 
+    geom_point(data = df2, aes(tree, AICc), colour = 'black', shape = 1, size = 3) + 
     facet_wrap(~type) + 
     theme_light() +
     theme(axis.text.x = element_text(angle = 90, vjust = 1, hjust = 1, size = 5)) +
     labs(color = "States") +
     xlab("Tree variant (reordered for visualisation)") +
     scale_color_viridis_d(option = "viridis", begin = .15, end = 1, alpha = 1, direction = -1) +
-    scale_fill_viridis_d(option = "inferno", begin = .1, end = .9, alpha = 0.5, direction = -1)
+    scale_fill_viridis_d(option = "viridis", begin = .1, end = .9, alpha = 0.5, direction = -1)
 
 ggplot(df1, aes(x = reorder(tree, BIC, FUN = min), y = BIC, colour = as.factor(states))) +
     geom_point(alpha= .75, size = 3) + 
-    geom_point(data = df2, aes(tree, BIC), colour = 'red', shape = 1, size = 3) + 
+    geom_point(data = df2, aes(tree, BIC), colour = "black", shape = 1, size = 3) + 
     facet_wrap(~type) + 
     theme_light() +
     theme(axis.text.x = element_text(angle = 90, vjust = 1, hjust = 1, size = 5)) +
     labs(color = "States") +
     xlab("Tree variant (reordered for visualisation)") +
     scale_color_viridis_d(option = "inferno", begin = .1, end = .9, alpha = 1) +
-    scale_fill_viridis_d(option = "inferno", begin = .1, end = .9, alpha = 0.5)
+    scale_fill_viridis_d(option = "inferno", begin = .1, end = .9, alpha = 0.5) #+ 
+    # add arrow to mark MCC tree
+    #geom_segment(aes(x = "MCC", y = 17300, xend = "MCC", yend = 17700), colour = 1,
+    #             arrow = arrow(length = unit(0.5, "cm"), type = "open"))
 dev.off()
 
 # same plot as above but trees not ordered
@@ -254,7 +257,7 @@ pdf(file = "VR models relative support by diff_AICc.pdf", width = 15, height = 1
 ggplot(data = vrA, aes(y = diff_AICc, x = as.factor(states), fill = as.factor(states))) +
     geom_flat_violin(position = position_nudge(x = .2, y = 0), alpha = .8) +
     geom_point(aes(y = diff_AICc, x = as.factor(states), color = as.factor(states)), 
-               position = position_jitter(width = .1), size = 3, alpha = 0.6) +
+               position = position_jitter(width = .1), size = 2, alpha = 0.6) +
     geom_boxplot(width = .15, outlier.shape = NA, alpha = 0.6) +
     guides(fill = "none", color = "none") + # don't show a legend
     #labs(color = "States", fill = "States") + # in case a legend is needed
@@ -274,7 +277,7 @@ pdf(file = "VR models relative support by diff_BIC.pdf", width = 15, height = 10
 ggplot(data = vrB, aes(y = diff_BIC, x = as.factor(states), fill = as.factor(states))) +
     geom_flat_violin(position = position_nudge(x = .2, y = 0), alpha = .8) +
     geom_point(aes(y = diff_BIC, x = as.factor(states), color = as.factor(states)), 
-               position = position_jitter(width = .1), size = 3, alpha = 0.6) +
+               position = position_jitter(width = .1), size = 2, alpha = 0.6) +
     geom_boxplot(width = .15, outlier.shape = NA, alpha = 0.6) +
     guides(fill = "none", color = "none") + # don't show a legend
     #labs(color = "States", fill = "States") + # in case a legend is needed
@@ -328,7 +331,7 @@ dev.off()
 #dev.off()
 
 # comparing model type performance
-pdf(file="model type performance by tree.pdf", width = 15, height = 10)
+pdf(file="model type performance by tree_AICc.pdf", width = 15, height = 10)
 ggplot(ordbytA, aes(x=states, AICc, colour = type, group=type)) +
     geom_point(alpha= .5, size = 3) + 
     geom_line(size = 1.5, alpha = 0.5) +
@@ -336,7 +339,9 @@ ggplot(ordbytA, aes(x=states, AICc, colour = type, group=type)) +
     facet_wrap(~tree, nrow = 6) + 
     scale_color_viridis_d(option = "viridis", #inferno, turbo, mako
                           begin = 0, end = .95, direction = -1)
+dev.off()
 
+pdf(file="model type performance by tree_BIC.pdf", width = 15, height = 10)
 ggplot(ordbytB, aes(x=states, BIC, colour = type, group=type)) +
     geom_point(alpha= .5, size = 3) +  
     geom_line(size = 1.5, alpha = 0.5) +
@@ -347,12 +352,11 @@ ggplot(ordbytB, aes(x=states, BIC, colour = type, group=type)) +
 dev.off()
 
 
-# same as above but trees ordered by BIC
+# same as above but trees ordered by BIC (this code works, but tree labels are gone)
 srd <- ordbytB[order(ordbytB$BIC),] 
 sru <- unique(srd$tree)
 for(i in 1:nrow(ordbytB)){ordbytB$ordBIC[i] <- which(sru == ordbytB$tree[i])}
 
-# this code works, but tree labels are gone
 ggplot(ordbytB, aes(x=states, BIC, colour = type, group=type)) +
     geom_point(alpha= .5, size = 3) +  
     geom_line(size = 1.5, alpha = 0.5) +
@@ -374,18 +378,6 @@ for(t in unique(ordbytB$tree)){
 }
 table(trees$best)
 
-# comparing likelihood of all models, divided to trees and no. of states, grouped by model type
-#pdf(file="likelihood by trees.pdf", width = 10, height = 8)
-#ggplot(ordbyt) +
-#    geom_point(aes(x=type, loglik, colour = factor(states)), alpha= .8, size = 2) +
-#    theme_light() +
-#    theme(axis.text.x = element_text(angle = 20, vjust = 1, hjust = 1)) +
-#    facet_wrap(~tree, nrow = 3) + 
-#    scale_color_viridis_d(option = "viridis", 
-#                          begin = 0,
-#                          end = .9,
-#                          direction = -1)
-#dev.off()
 
 # 2. Parameter estimates ------------------------------------------------------
 setwd("C:/Users/Roi Maor/Desktop/2nd Chapter/DivRates/MuHiSSE/Analyses/ResultsCluster")
@@ -398,11 +390,11 @@ params <- params[which(is.na(str_extract(names(params), ".00..11.|.11..00.")))] 
 ## 2.1 calculate s and mu from composite rates --------------------------------
 
 #   reminder: turnover = spec+ext; netDiv = spec-ext; extFrac = ext/spec 
-#   symbols: turnover-tau; extFrac-eps; spec_rate-s; ext_rate-mu; netDiv-lambda;
+#   symbols: tau-turnover; eps-extFrac; s-speciation; mu-extinction; lambda-netDiv;
 #   Developing two equations w two unknowns on paper, got this:
 #
-#  // s = tau/(1+eps) \\ 
-#  \\ mu = tau-s      //
+#  // s = tau/(1+eps) \\        # speciation rate
+#  \\ mu = tau-s      //        # extinction rate
 
 div <- params           # create a mirror table to write s and mu values into
 div[,which(is.na(str_extract(names(params), "q.")))] <- NA  # remove transition rates
@@ -471,7 +463,8 @@ for (state in 1:max(leading$states)) {
 ## indicate different number of parameters so not comparable. 
 
 # weight estimated values by model support for all tree variants (not for MCC)
-mod_avg <- leading
+mod_avg <- leading[which(leading$weight > 0.6),] # remove less-well supported trees
+
 for (i in 1:length(which(mod_avg$tree != "MCC"))) {
     mod_avg[i,12:ncol(mod_avg)] <- mod_avg$weight[i] * mod_avg[i,12:ncol(mod_avg)]
 } 
@@ -501,11 +494,63 @@ evol <- evol[which(is.na(str_extract(colnames(evol), "q")))] # all rates that ar
 ### 2.3.1 Evolutionary rates --------------------------------------------------
 evol$model <- str_replace(rownames(evol), ".RDS", "") # remove file suffix from model names
 
-# find and then remove model/s based on MCC tree
-for(i in 1:nrow(evol)){if(strsplit(evol$model[i], "_")[[1]][2] == "MCCtree"){drop_mcc <- i}}
-evol <- evol[-drop_mcc,]
+# find and remove model/s based on MCC tree
+for(i in 1:nrow(evol)){if(strsplit(evol$model[i], "_")[[1]][2] == "MCCtree"){mcc <- i}}
+evol <- evol[-mcc,]
+
+
+#### 2.3.1.1 Aggregated evolutionary rates (by AP) ----------------------------
+
+## average rate estimates over states for each activity pattern
+# make cols for aggergated rates
+evol$div_N <- evol$ext_N <- evol$spec_N <- as.numeric(rep("", nrow(evol))) 
+evol$div_C <- evol$ext_C <- evol$spec_C <- as.numeric(rep("", nrow(evol))) 
+evol$div_D <- evol$ext_D <- evol$spec_D <- as.numeric(rep("", nrow(evol))) 
+
+for(i in 1:nrow(evol)){
+    # find number of states in the model
+    nstate <- str_split(rownames(evol)[i], "_")[[1]][1] %>%
+        str_sub(-1L,-1L) %>%
+        as.numeric()
+    # exclude columns of states not in the model (use clone to notmodify original data frame)
+    clone <- evol[i,]
+    dummies <- which(str_sub(colnames(clone), -1L, -1L) %in% LETTERS[(nstate+1):8])
+    clone[,dummies] <- NA 
+    
+    ## calculate mean of relevant rate estimates
+    for(stt in c("00","01","11")){
+        if(stt == "00") AP <- "N"
+        if(stt == "01") AP <- "C"
+        if(stt == "11") AP <- "D"
+        
+        # isolate relevant rates
+        spec_cols <- paste0("s",stt,LETTERS[1:nstate])
+        ext_cols <- paste0("mu",stt,LETTERS[1:nstate])
+        div_cols <- paste0("lambda",stt,LETTERS[1:nstate])
+        
+        # locate correct column to write mean rate into
+        s_agg <- which(colnames(evol) == paste0("spec_",AP))
+        e_agg <- which(colnames(evol) == paste0("ext_",AP))
+        d_agg <- which(colnames(evol) == paste0("div_",AP))
+        
+        # calculate means and write to main table
+        evol[i,s_agg] <- mean(as.numeric(clone[,which(colnames(clone) %in% spec_cols)]))
+        evol[i,e_agg] <- mean(as.numeric(clone[,which(colnames(clone) %in% ext_cols)]))
+        evol[i,d_agg] <- mean(as.numeric(clone[,which(colnames(clone) %in% div_cols)]))
+    }
+}
+#store in separate object
+delim <- which(colnames(evol) == "model")
+agg_rates <- evol[,delim:ncol(evol)]
+evol <- evol[,1:delim]
 
 # melt into long form
+agg <- pivot_longer(agg_rates, cols=2:ncol(agg_rates), names_to = "agg_rate", values_to = "value") %>%
+    drop_na()
+
+
+# 2.3.1.2 Individual evolutionary rates ---------------------------------------
+
 evo <- pivot_longer(evol, cols=1:ncol(evol)-1, names_to = "rate", values_to = "value") %>%
     drop_na()
 
@@ -532,13 +577,15 @@ rm(type, modtype, rtype, AP, state)
 ####
 
 ## removing transitions between states that do not exist in the model
-tri_state <- which(str_sub(evo$model, start = -10L, end = -10L) == 3) # 3-state models
-quad_state <- which(str_sub(evo$model, start = -10L, end = -10L) == 4)# 4-state models
-hi_states <- which(evo$state %in% c("D","E","F","G","H"))   # transitions outside states A-C
-vhi_states <- which(evo$state %in% c("E","F","G","H"))  # transitions outside states A-D
-remove <- c(intersect(tri_state, hi_states), intersect(quad_state, vhi_states))
+bi_state <- which(str_sub(evo$model, start = -10L, end = -10L) == 2)    # 2-state models
+tri_state <- which(str_sub(evo$model, start = -10L, end = -10L) == 3)   # 3-state models
+quad_state <- which(str_sub(evo$model, start = -10L, end = -10L) == 4)  # 4-state models
+mid_states <- which(evo$state %in% LETTERS[3:8])        # transitions outside states A-B
+hi_states <- which(evo$state %in% LETTERS[4:8])         # transitions outside states A-C
+vhi_states <- which(evo$state %in% LETTERS[5:8])        # transitions outside states A-D
+remove <- c(intersect(bi_state, mid_states), intersect(tri_state, hi_states), intersect(quad_state, vhi_states))
 evo <- evo[-remove,]
-rm(tri_state, quad_state, hi_states, vhi_states, remove)
+rm(bi_state, tri_state, quad_state, mid_states, hi_states, vhi_states, remove)
 
 # plot rate estimates
 # This code loads the function in the working environment
@@ -546,9 +593,50 @@ rm(tri_state, quad_state, hi_states, vhi_states, remove)
 
 setwd("C:/Users/Roi Maor/Desktop/2nd Chapter/DivRates/MuHiSSE/Output")
 
+# removing outliers from aggregated rates
+d <- numeric()
+for(i in 1:nrow(agg)){if(strsplit(agg$model[i], "_")[[1]][2] == "tree1803"){d <- c(d,i)}}
+agg_NOL <- agg[-d,]
+
+ggplot(agg_NOL, aes(x = agg_rate, y = value)) +
+    geom_flat_violin(aes(fill = as.factor(str_sub(-1L,-1L))), position = position_nudge(x = .15, y = 0), alpha = .8) +
+    geom_point(aes(fill = str_sub(-1L,-1L)), position = position_jitter(width = .05), shape = 21, size = 1.3, alpha = 0.3) + 
+    geom_boxplot(aes(fill = str_sub(-1L,-1L)), width = .15, outlier.shape = NA, alpha = 0.6) +
+    theme_light() +
+    theme(axis.text.x = element_text(vjust = 1, hjust = 0.5)) + #angle = 80, 
+    scale_fill_manual(values = cols <- c("#33DD00","#FFCC00","#2233FF"))+#,"grey")) +
+    # the below line should be used for coloring boxplots by AP with the argument 'colour='
+    #scale_colour_manual(values = c("green3","gold2","dodgerblue3"))+#,"blue")) +
+    guides(fill = "none", color = "none") +
+    geom_rect(aes(xmin = 7 - 0.3, xmax = 9 + 0.55, ymin = 0 - 0.05, ymax = max(value, na.rm=TRUE) + 0.1),
+              color = "red", fill = "transparent", size = 1.2) 
+
+
+# unaggregated rates
 tb1 <- evo
 tb2 <- evo[which(evo$modtype == 3),] # only 3-state models
 tb3 <- evo[which(evo$modtype == 4),] # only 4-state models
+
+#### removing outliers 
+tb1[which(tb1$value > 1.25),] # identify trees w exceptionally high rate estimates
+# find indices of all rates based on the problematic tree
+d <- numeric()
+for(i in 1:nrow(evo)){if(strsplit(evo$model[i], "_")[[1]][2] == "tree1803"){d <- c(d,i)}}
+# plot all rates and highlight estimates from outlier-bearing models
+#ggplot(tb1, aes(x = rtype, y = value)) +
+#    geom_flat_violin(aes(fill = AP), position = position_nudge(x = .15, y = 0), alpha = .8) +
+#    geom_point(aes(fill = AP), position = position_jitter(width = .1), shape = 21, size = 2, alpha = 0.2) + #
+#    geom_boxplot(aes(fill = AP), width = .15, outlier.shape = NA, alpha = 0.6) +
+#    theme_light() +
+#    theme(axis.text.x = element_text(vjust = 1, hjust = 0.5)) + #angle = 80, 
+#    #ylim(c(0,1)) +
+#    #facet_wrap(~type) + 
+#    scale_fill_manual(values = cols <- c("#33DD00","#FFCC00","#2233FF"))+#,"grey")) +
+#    # the below line should be used for coloring boxplots by AP with the argument 'colour='
+#    #scale_colour_manual(values = c("green3","gold2","dodgerblue3"))+#,"blue")) +
+#    guides(fill = "none", color = "none") +
+#    geom_point(data = tb1[d,], aes(x = rtype, y = value), colour = "red", size = 2)
+tb1 <- tb1[-d,]
 
 pdf(file="Evol rates est_no_outliers.pdf", width = 14, height = 8)
 # reorder to put speciation before extinction
@@ -570,26 +658,6 @@ dev.off()
 tb1 %>% group_by(state) %>% tally()
 
 
-#### removing outliers 
-tb1[which(tb1$value > 1.25),] # identify trees w exceptionally high rate estimates
-# find indices of all rates based on the problematic tree
-d <- numeric()
-for(i in 1:nrow(evo)){if(strsplit(evo$model[i], "_")[[1]][2] == "tree1803"){d <- c(d,i)}}
-# plot all rates and highlight those a
-ggplot(tb1, aes(x = rtype, y = value)) +
-    geom_flat_violin(aes(fill = AP), position = position_nudge(x = .15, y = 0), alpha = .8) +
-    geom_point(aes(fill = AP), position = position_jitter(width = .1), shape = 21, size = 2, alpha = 0.2) + #
-    geom_boxplot(aes(fill = AP), width = .15, outlier.shape = NA, alpha = 0.6) +
-    theme_light() +
-    theme(axis.text.x = element_text(vjust = 1, hjust = 0.5)) + #angle = 80, 
-    #ylim(c(0,1)) +
-    #facet_wrap(~type) + 
-    scale_fill_manual(values = cols <- c("#33DD00","#FFCC00","#2233FF"))+#,"grey")) +
-    # the below line should be used for coloring boxplots by AP with the argument 'colour='
-    #scale_colour_manual(values = c("green3","gold2","dodgerblue3"))+#,"blue")) +
-    guides(fill = "none", color = "none") +
-    geom_point(data = tb1[d,], aes(x = rtype, y = value), colour = "red", size = 2)
-tb1 <- tb1[-d,]
 
 ### 2.3.2 Transition rates ----------------------------------------------------
 tran$model <- str_replace(rownames(tran), ".RDS", "") # remove file suffix from model names
@@ -654,8 +722,8 @@ ggplot(tbr5, aes(x = rtype, y = log(value+0.0000000001), fill = rtype)) + # adde
     geom_hline(aes(yintercept = log(10^-6), colour = 'red'), linetype = 2) + # this marks the effective rate of 0, because 10^-6 transitions per lineage per million years is 1 transition per 10000 lineages per 100 million years, which is unlikely to be detected when I examine <2500 lineages over 160 million years
     theme_light() +
     theme(axis.text.x = element_text(vjust = 1, hjust = 1)) +
-    annotate("rect", xmin = 0.45, xmax = 4.6, ymin = -24, ymax = log(10^-6)-0.1, alpha=0.6, fill="grey") +
-    scale_fill_manual(values = cols <- c("#AA22BB","#EE4444","gold1","#44DDFF")) +
+    annotate("rect", xmin = 0.45, xmax = 4.6, ymin = -24, ymax = log(10^-6)-0.1, alpha=0.4, fill="grey") +
+    scale_fill_manual(values = cols <- c("#AA22BB","#EE4444","gold1","#33AAFF")) +
     scale_colour_manual(values = c("#5A4A6F", "#E47250",  "#EBB261", "#9D5A6C","#5A4A6F", "#E47250",  "#EBB261", "#9D5A6C")) +
     labs(y = "log(transition rate)", x = "Transition type (from -> to)") +
     #annotate("text", x=2.5, y=-16, label= "undetectable\nrange", size = 4.5) + 
