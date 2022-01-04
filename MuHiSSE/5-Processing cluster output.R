@@ -499,7 +499,97 @@ for(i in 1:nrow(evol)){if(strsplit(evol$model[i], "_")[[1]][2] == "MCCtree"){mcc
 evol <- evol[-mcc,]
 
 
-#### 2.3.1.1 Aggregated evolutionary rates (by AP) ----------------------------
+#### 2.3.1.1 Individual evolutionary rates ------------------------------------
+
+evo <- pivot_longer(evol, cols=1:ncol(evol)-1, names_to = "rate", values_to = "value") %>%
+    drop_na()
+
+# additional info ('metadata') on each rate
+{type <- modtype <- rtype <- AP <- state <- character()
+
+type[which(!is.na(str_extract(evo$rate, "s")))] <- "spec"
+type[which(!is.na(str_extract(evo$rate, "mu")))] <- "ext"
+type[which(!is.na(str_extract(evo$rate, "lambda")))] <- "net.div"
+
+for (i in 1:nrow(evo)){
+    modtype[i] <- str_extract(str_split(evo$model[i], "_")[[1]][1], "[0-9]")
+    rtype[i] <- str_sub(evo$rate[i], start = 1L, end = -2L)}
+
+AP[which(str_sub(evo$rate, start = -3L, end = -2L) == "00")] <- "Noct"
+AP[which(str_sub(evo$rate, start = -3L, end = -2L) == "01")] <- "Cath"
+AP[which(str_sub(evo$rate, start = -3L, end = -2L) == "11")] <- "Diur"
+
+state <- str_sub(evo$rate, start = -1L, end = -1L)
+}
+
+evo <- cbind(evo, type, modtype, rtype, AP, state)
+rm(type, modtype, rtype, AP, state)
+####
+
+## removing transitions between states that do not exist in the model
+bi_state <- which(str_sub(evo$model, start = -10L, end = -10L) == 2)    # 2-state models
+tri_state <- which(str_sub(evo$model, start = -10L, end = -10L) == 3)   # 3-state models
+quad_state <- which(str_sub(evo$model, start = -10L, end = -10L) == 4)  # 4-state models
+mid_states <- which(evo$state %in% LETTERS[3:8])        # transitions outside states A-B
+hi_states <- which(evo$state %in% LETTERS[4:8])         # transitions outside states A-C
+vhi_states <- which(evo$state %in% LETTERS[5:8])        # transitions outside states A-D
+remove <- c(intersect(bi_state, mid_states), intersect(tri_state, hi_states), intersect(quad_state, vhi_states))
+evo <- evo[-remove,]
+rm(bi_state, tri_state, quad_state, mid_states, hi_states, vhi_states, remove)
+
+# plot rate estimates
+# This code loads the function in the working environment
+#source("https://gist.githubusercontent.com/benmarwick/2a1bb0133ff568cbe28d/raw/fb53bd97121f7f9ce947837ef1a4c65a73bffb3f/geom_flat_violin.R")
+
+setwd("C:/Users/Roi Maor/Desktop/2nd Chapter/DivRates/MuHiSSE/Output")
+
+# unaggregated rates
+tb1 <- evo
+tb2 <- evo[which(evo$modtype == 3),] # only 3-state models
+tb3 <- evo[which(evo$modtype == 4),] # only 4-state models
+
+#### removing outliers 
+tb1[which(tb1$value > 1.25),] # identify trees w exceptionally high rate estimates
+# find indices of all rates based on the problematic tree
+d <- numeric()
+for(i in 1:nrow(evo)){if(strsplit(evo$model[i], "_")[[1]][2] == "tree1803"){d <- c(d,i)}}
+# plot all rates and highlight estimates from outlier-bearing models
+#ggplot(tb1, aes(x = rtype, y = value)) +
+#    geom_flat_violin(aes(fill = AP), position = position_nudge(x = .15, y = 0), alpha = .8) +
+#    geom_point(aes(fill = AP), position = position_jitter(width = .1), shape = 21, size = 2, alpha = 0.2) + #
+#    geom_boxplot(aes(fill = AP), width = .15, outlier.shape = NA, alpha = 0.6) +
+#    theme_light() +
+#    theme(axis.text.x = element_text(vjust = 1, hjust = 0.5)) + #angle = 80, 
+#    #ylim(c(0,1)) +
+#    #facet_wrap(~type) + 
+#    scale_fill_manual(values = cols <- c("#33DD00","#FFCC00","#2233FF"))+#,"grey")) +
+#    # the below line should be used for coloring boxplots by AP with the argument 'colour='
+#    #scale_colour_manual(values = c("green3","gold2","dodgerblue3"))+#,"blue")) +
+#    guides(fill = "none", color = "none") +
+#    geom_point(data = tb1[d,], aes(x = rtype, y = value), colour = "red", size = 2)
+tb1 <- tb1[-d,]
+
+pdf(file="Evol rates est_no_outliers.pdf", width = 14, height = 8)
+# reorder to put speciation before extinction
+tb1$rtype <- factor(tb1$rtype, levels = c("s00","s01","s11","mu00","mu01","mu11","lambda00","lambda01","lambda11"))
+ggplot(tb1, aes(x = rtype, y = value)) +
+    geom_flat_violin(aes(fill = AP), position = position_nudge(x = .15, y = 0), alpha = .8) +
+    geom_point(aes(fill = AP), position = position_jitter(width = .05), shape = 21, size = 1.3, alpha = 0.3) + #
+    geom_boxplot(aes(fill = AP), width = .15, outlier.shape = NA, alpha = 0.6) +
+    theme_light() +
+    theme(axis.text.x = element_text(vjust = 1, hjust = 0.5)) + #angle = 80, 
+    scale_fill_manual(values = cols <- c("#33DD00","#FFCC00","#2233FF"))+#,"grey")) +
+    # the below line should be used for coloring boxplots by AP with the argument 'colour='
+    #scale_colour_manual(values = c("green3","gold2","dodgerblue3"))+#,"blue")) +
+    guides(fill = "none", color = "none") +
+    geom_rect(aes(xmin = 7 - 0.3, xmax = 9 + 0.55, ymin = 0 - 0.05, ymax = max(value, na.rm=TRUE) + 0.1),
+              color = "red", fill = "transparent", size = 1.2) 
+dev.off()
+    
+tb1 %>% group_by(state) %>% tally()
+
+
+#### 2.3.1.2 Aggregated evolutionary rates (by AP) ----------------------------
 
 ## average rate estimates over states for each activity pattern
 # make cols for aggergated rates
@@ -549,113 +639,140 @@ agg <- pivot_longer(agg_rates, cols=2:ncol(agg_rates), names_to = "agg_rate", va
     drop_na()
 
 
-# 2.3.1.2 Individual evolutionary rates ---------------------------------------
-
-evo <- pivot_longer(evol, cols=1:ncol(evol)-1, names_to = "rate", values_to = "value") %>%
-    drop_na()
-
-# additional info ('metadata') on each rate
-{type <- modtype <- rtype <- AP <- state <- character()
-
-type[which(!is.na(str_extract(evo$rate, "s")))] <- "spec"
-type[which(!is.na(str_extract(evo$rate, "mu")))] <- "ext"
-type[which(!is.na(str_extract(evo$rate, "lambda")))] <- "net.div"
-
-for (i in 1:nrow(evo)){
-    modtype[i] <- str_extract(str_split(evo$model[i], "_")[[1]][1], "[0-9]")
-    rtype[i] <- str_sub(evo$rate[i], start = 1L, end = -2L)}
-
-AP[which(str_sub(evo$rate, start = -3L, end = -2L) == "00")] <- "Noct"
-AP[which(str_sub(evo$rate, start = -3L, end = -2L) == "01")] <- "Cath"
-AP[which(str_sub(evo$rate, start = -3L, end = -2L) == "11")] <- "Diur"
-
-state <- str_sub(evo$rate, start = -1L, end = -1L)
-}
-
-evo <- cbind(evo, type, modtype, rtype, AP, state)
-rm(type, modtype, rtype, AP, state)
-####
-
-## removing transitions between states that do not exist in the model
-bi_state <- which(str_sub(evo$model, start = -10L, end = -10L) == 2)    # 2-state models
-tri_state <- which(str_sub(evo$model, start = -10L, end = -10L) == 3)   # 3-state models
-quad_state <- which(str_sub(evo$model, start = -10L, end = -10L) == 4)  # 4-state models
-mid_states <- which(evo$state %in% LETTERS[3:8])        # transitions outside states A-B
-hi_states <- which(evo$state %in% LETTERS[4:8])         # transitions outside states A-C
-vhi_states <- which(evo$state %in% LETTERS[5:8])        # transitions outside states A-D
-remove <- c(intersect(bi_state, mid_states), intersect(tri_state, hi_states), intersect(quad_state, vhi_states))
-evo <- evo[-remove,]
-rm(bi_state, tri_state, quad_state, mid_states, hi_states, vhi_states, remove)
-
-# plot rate estimates
-# This code loads the function in the working environment
-#source("https://gist.githubusercontent.com/benmarwick/2a1bb0133ff568cbe28d/raw/fb53bd97121f7f9ce947837ef1a4c65a73bffb3f/geom_flat_violin.R")
-
-setwd("C:/Users/Roi Maor/Desktop/2nd Chapter/DivRates/MuHiSSE/Output")
-
-# removing outliers from aggregated rates
+## remove outliers and plot
 d <- numeric()
 for(i in 1:nrow(agg)){if(strsplit(agg$model[i], "_")[[1]][2] == "tree1803"){d <- c(d,i)}}
 agg_NOL <- agg[-d,]
 
-ggplot(agg_NOL, aes(x = agg_rate, y = value)) +
-    geom_flat_violin(aes(fill = as.factor(str_sub(-1L,-1L))), position = position_nudge(x = .15, y = 0), alpha = .8) +
-    geom_point(aes(fill = str_sub(-1L,-1L)), position = position_jitter(width = .05), shape = 21, size = 1.3, alpha = 0.3) + 
-    geom_boxplot(aes(fill = str_sub(-1L,-1L)), width = .15, outlier.shape = NA, alpha = 0.6) +
-    theme_light() +
-    theme(axis.text.x = element_text(vjust = 1, hjust = 0.5)) + #angle = 80, 
-    scale_fill_manual(values = cols <- c("#33DD00","#FFCC00","#2233FF"))+#,"grey")) +
-    # the below line should be used for coloring boxplots by AP with the argument 'colour='
-    #scale_colour_manual(values = c("green3","gold2","dodgerblue3"))+#,"blue")) +
-    guides(fill = "none", color = "none") +
-    geom_rect(aes(xmin = 7 - 0.3, xmax = 9 + 0.55, ymin = 0 - 0.05, ymax = max(value, na.rm=TRUE) + 0.1),
-              color = "red", fill = "transparent", size = 1.2) 
+agg_NOL$AP <- NA
+for(i in 1:nrow(agg_NOL)){
+    if(str_sub(agg_NOL$agg_rate[i], -1L, -1L) == "N"){agg_NOL$AP[i] <- "Noct"} 
+    if(str_sub(agg_NOL$agg_rate[i], -1L, -1L) == "C"){agg_NOL$AP[i] <- "Cath"}
+    if(str_sub(agg_NOL$agg_rate[i], -1L, -1L) == "D"){agg_NOL$AP[i] <- "Diur"}
+}
+
+pdf(file="Aggregated evol rates est_no_outliers.pdf", width = 14, height = 8)
+agg_NOL %>%
+    mutate(agg_rate = factor(agg_rate, levels=c("spec_N", "spec_C", "spec_D", "ext_N", "ext_C", "ext_D", "div_N", "div_C", "div_D"))) %>%
+    ggplot(aes(x = agg_rate, y = value)) +
+        geom_flat_violin(aes(fill = AP), position = position_nudge(x = .15, y = 0), alpha = .8) +
+        geom_point(aes(fill = AP), position = position_jitter(width = .05), shape = 21, size = 1.5, alpha = 0.3) + 
+        geom_boxplot(aes(fill = AP), width = .15, outlier.shape = NA, alpha = 0.6) +
+        theme_light() +
+        theme(axis.text.x = element_text(vjust = 1, hjust = 0.5)) + #angle = 80, 
+        scale_fill_manual(values = cols <- c("#33DD00","#FFCC00","#2233FF"))+#,"grey")) +
+        # the below line should be used for coloring boxplots by AP with the argument 'colour='
+        scale_colour_manual(values = c("green3","gold2","dodgerblue3"))+#,"blue")) +
+        guides(fill = "none", color = "none") +
+        geom_rect(aes(xmin = 7 - 0.3, xmax = 9 + 0.55, ymin = 0 - 0.05, ymax = max(value, na.rm=TRUE) + 0.1),
+                  color = "red", fill = "transparent", size = 1.2) 
+dev.off()
 
 
-# unaggregated rates
-tb1 <- evo
-tb2 <- evo[which(evo$modtype == 3),] # only 3-state models
-tb3 <- evo[which(evo$modtype == 4),] # only 4-state models
+#### 2.3.1.3 Within-state relative rates --------------------------------------
 
-#### removing outliers 
-tb1[which(tb1$value > 1.25),] # identify trees w exceptionally high rate estimates
-# find indices of all rates based on the problematic tree
-d <- numeric()
-for(i in 1:nrow(evo)){if(strsplit(evo$model[i], "_")[[1]][2] == "tree1803"){d <- c(d,i)}}
-# plot all rates and highlight estimates from outlier-bearing models
-#ggplot(tb1, aes(x = rtype, y = value)) +
-#    geom_flat_violin(aes(fill = AP), position = position_nudge(x = .15, y = 0), alpha = .8) +
-#    geom_point(aes(fill = AP), position = position_jitter(width = .1), shape = 21, size = 2, alpha = 0.2) + #
-#    geom_boxplot(aes(fill = AP), width = .15, outlier.shape = NA, alpha = 0.6) +
-#    theme_light() +
-#    theme(axis.text.x = element_text(vjust = 1, hjust = 0.5)) + #angle = 80, 
-#    #ylim(c(0,1)) +
-#    #facet_wrap(~type) + 
-#    scale_fill_manual(values = cols <- c("#33DD00","#FFCC00","#2233FF"))+#,"grey")) +
-#    # the below line should be used for coloring boxplots by AP with the argument 'colour='
-#    #scale_colour_manual(values = c("green3","gold2","dodgerblue3"))+#,"blue")) +
-#    guides(fill = "none", color = "none") +
-#    geom_point(data = tb1[d,], aes(x = rtype, y = value), colour = "red", size = 2)
-tb1 <- tb1[-d,]
+## TODO: fix the plotting code and think if the hidden states should be aggregated !!
 
-pdf(file="Evol rates est_no_outliers.pdf", width = 14, height = 8)
-# reorder to put speciation before extinction
-tb1$rtype <- factor(tb1$rtype, levels = c("s00","s01","s11","mu00","mu01","mu11","lambda00","lambda01","lambda11"))
-ggplot(tb1, aes(x = rtype, y = value)) +
-    geom_flat_violin(aes(fill = AP), position = position_nudge(x = .15, y = 0), alpha = .8) +
-    geom_point(aes(fill = AP), position = position_jitter(width = .05), shape = 21, size = 1.3, alpha = 0.3) + #
+## in each state, take the differential between noturnal rates and the rate in 
+## the other activity patterns
+rel_rates <- evol[,-c(25:48)]
+
+for(i in 1:nrow(rel_rates)){
+    
+    ## exclude columns of states not in the model (use clone to notmodify original data frame)
+    #dummies <- which(str_sub(colnames(clone), -1L, -1L) %in% LETTERS[(nstate+1):8])
+    #clone[i,dummies] <- NA 
+    
+    for(z in 1:20){
+        
+        # find number of states in the model
+        nstate <- str_split(rownames(rel_rates)[z], "_")[[1]][1] %>%
+            str_sub(-1L,-1L) %>%
+            as.numeric()
+        
+        if(nstate == 2){if(2*nstate < z && z < 9){z = 9} else if (z > 10){break}}
+        if(nstate == 3){if(2*nstate < z && z < 9){z = 9} else if (z > 11){break}}
+        if(nstate == 4){if(2*nstate < z && z < 9){z = 9}}
+        
+        # locate correct column (rate type in sets of 3 cols, state in sets of six)
+        noc <- colnames(rel_rates)[3*z-2]
+        cat <- colnames(rel_rates)[3*z-1]
+        diu <- colnames(rel_rates)[3*z]
+        
+        # calculate rate differences and write to main table
+        rel_rates[i,noc] <- as.numeric(rel_rates[i,noc]) - as.numeric(rel_rates[i,noc])
+        rel_rates[i,cat] <- as.numeric(rel_rates[i,cat]) - as.numeric(rel_rates[i,noc])
+        rel_rates[i,diu] <- as.numeric(rel_rates[i,diu]) - as.numeric(rel_rates[i,noc])
+  
+  ## alternative 2 - more accurate and complex  - one day I'll fix it...    
+        ### calculate difference between relevant rate estimates
+        #for(stt in LETTERS[1:nstate]){
+        #    for(e_rate in c("s","mu","lambda")){
+        #        noc <- which(colnames(evol) == paste0(e_rate,"00",stt))
+        #        cat <- which(colnames(evol) == paste0(e_rate,"01",stt))
+        #        diu <- which(colnames(evol) == paste0(e_rate,"11",stt))
+        #        
+        #        # locate correct column to write mean rate into
+        #        rel_rate_N <- which(colnames(evol) == paste0(e_rate,"_Noct_",stt))
+        #        rel_rate_C <- which(colnames(evol) == paste0(e_rate,"_Cath_",stt))
+        #        rel_rate_D <- which(colnames(evol) == paste0(e_rate,"_Diur_",stt))
+        #        
+        #        # calculate rate differences and write to main table
+        #        evol[i,rel_rate_N] <- as.numeric(clone[,noc]) - as.numeric(clone[,noc])
+        #        evol[i,rel_rate_C] <- as.numeric(clone[,cat]) - as.numeric(clone[,noc])
+        #        evol[i,rel_rate_D] <- as.numeric(clone[,diu]) - as.numeric(clone[,noc])
+        #    }
+        #}    
+    }
+}
+
+# melt into long form
+relat <- pivot_longer(rel_rates, cols=1:ncol(rel_rates)-1, names_to = "relative_rate", values_to = "value") %>%
+    drop_na()
+    
+{relat$relative_rate <- gsub("s", "spec_", relat$relative_rate)
+relat$relative_rate <- gsub("mu", "ext_", relat$relative_rate)
+relat$relative_rate <- gsub("lambda", "div_", relat$relative_rate)
+
+relat$relative_rate <- gsub("00", "Noct_", relat$relative_rate)
+relat$relative_rate <- gsub("01", "Cath_", relat$relative_rate)
+relat$relative_rate <- gsub("11", "Diur_", relat$relative_rate)
+}
+
+relat$AP <- NA
+for(i in 1:nrow(relat)){
+    if(str_sub(relat$relative_rate[i], -6L, -3L) == "Noct"){relat$AP[i] <- "Noct"} 
+    if(str_sub(relat$relative_rate[i], -6L, -3L) == "Cath"){relat$AP[i] <- "Cath"}
+    if(str_sub(relat$relative_rate[i], -6L, -3L) == "Diur"){relat$AP[i] <- "Diur"}
+}
+
+pdf(file="Evol rates relative to NOCT.pdf", width = 14, height = 8)
+relat %>%
+    mutate(relative_rate = factor(relative_rate, 
+                                  levels=c("spec_Noct_A", "spec_Cath_A", "spec_Diur_A", 
+                                           "ext_Noct_A", "ext_Cath_A", "ext_Diur_A", 
+                                           "spec_Noct_B", "spec_Cath_B", "spec_Diur_B", 
+                                           "ext_Noct_B", "ext_Cath_B", "ext_Diur_B", 
+                                           "spec_Noct_C", "spec_Cath_C", "spec_Diur_C", 
+                                           "ext_Noct_C", "ext_Cath_C", "ext_Diur_C", 
+                                           "spec_Noct_D", "spec_Cath_D", "spec_Diur_D",
+                                           "ext_Noct_D", "ext_Cath_D", "ext_Diur_D", 
+                                           "div_Noct_A", "div_Cath_A", "div_Diur_A", 
+                                           "div_Noct_B", "div_Cath_B", "div_Diur_B", 
+                                           "div_Noct_C", "div_Cath_C", "div_Diur_C", 
+                                           "div_Noct_D", "div_Cath_D", "div_Diur_D"))) %>%
+    ggplot(aes(x = relative_rate, y = value)) +
+    #geom_flat_violin(aes(fill = AP), position = position_nudge(x = .15, y = 0), alpha = .8) +
+    geom_point(aes(fill = AP), position = position_jitter(width = .05), shape = 21, size = 1.5, alpha = 0.3) + 
     geom_boxplot(aes(fill = AP), width = .15, outlier.shape = NA, alpha = 0.6) +
     theme_light() +
-    theme(axis.text.x = element_text(vjust = 1, hjust = 0.5)) + #angle = 80, 
+    theme(axis.text.x = element_text(vjust = 1, hjust = 0.5, angle = 80)) + # 
     scale_fill_manual(values = cols <- c("#33DD00","#FFCC00","#2233FF"))+#,"grey")) +
     # the below line should be used for coloring boxplots by AP with the argument 'colour='
-    #scale_colour_manual(values = c("green3","gold2","dodgerblue3"))+#,"blue")) +
-    guides(fill = "none", color = "none") +
-    geom_rect(aes(xmin = 7 - 0.3, xmax = 9 + 0.55, ymin = 0 - 0.05, ymax = max(value, na.rm=TRUE) + 0.1),
-              color = "red", fill = "transparent", size = 1.2) 
+    scale_colour_manual(values = c("green3","gold2","dodgerblue3"))+#,"blue")) +
+    guides(fill = "none", color = "none")
 dev.off()
-    
-tb1 %>% group_by(state) %>% tally()
+
 
 
 
