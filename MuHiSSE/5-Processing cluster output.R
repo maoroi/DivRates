@@ -671,98 +671,96 @@ dev.off()
 
 #### 2.3.1.3 Within-state relative rates --------------------------------------
 
-## TODO: fix the plotting code and think if the hidden states should be aggregated !!
+## in each state, take the differential between nocturnal rates and the rate in the other AP
+rel_rates <- evol[,-c(25:48)] ## exclude columns of states not in the model 
 
-## in each state, take the differential between noturnal rates and the rate in 
-## the other activity patterns
-rel_rates <- evol[,-c(25:48)]
+## calculate rate differences
+for(z in 0:11){ # iterate over the 12 sets of rates(3 evol. rate types, up to 4 hidden states), 3 columns in each set (N,C, and D)
+    # in each set of 3 columns the first one is the nocturnal baseline
+    baseline <- rel_rates[,3*z+1]
+    # caluclate differences for all columns
+    rel_rates[,3*z+1] <- rel_rates[,3*z+1] - baseline
+    rel_rates[,3*z+2] <- rel_rates[,3*z+2] - baseline
+    rel_rates[,3*z+3] <- rel_rates[,3*z+3] - baseline
+}
+    
+## average rate estimates over states for each activity pattern
+# make cols for aggergated rates
+rel_rates$div_N <- rel_rates$ext_N <- rel_rates$spec_N <- as.numeric(rep("", nrow(rel_rates))) 
+rel_rates$div_C <- rel_rates$ext_C <- rel_rates$spec_C <- as.numeric(rep("", nrow(rel_rates))) 
+rel_rates$div_D <- rel_rates$ext_D <- rel_rates$spec_D <- as.numeric(rep("", nrow(rel_rates))) 
 
+# aggregate rate differences for each hidden state
 for(i in 1:nrow(rel_rates)){
+    # find number of states in the model
+    nstate <- str_split(rownames(rel_rates)[i], "_")[[1]][1] %>%
+        str_sub(-1L,-1L) %>%
+        as.numeric()
+    # exclude columns of states not in the model (use clone to notmodify original data frame)
+    clone <- rel_rates[i,]
+    dummies <- which(str_sub(colnames(clone), -1L, -1L) %in% LETTERS[(nstate+1):8])
+    clone[,dummies] <- NA 
     
-    ## exclude columns of states not in the model (use clone to notmodify original data frame)
-    #dummies <- which(str_sub(colnames(clone), -1L, -1L) %in% LETTERS[(nstate+1):8])
-    #clone[i,dummies] <- NA 
-    
-    for(z in 1:20){
+    ## calculate mean of relevant rate estimates
+    for(chr in c("00","01","11")){
+        if(chr == "00") AP <- "N"
+        if(chr == "01") AP <- "C"
+        if(chr == "11") AP <- "D"
         
-        # find number of states in the model
-        nstate <- str_split(rownames(rel_rates)[z], "_")[[1]][1] %>%
-            str_sub(-1L,-1L) %>%
-            as.numeric()
+        # isolate relevant rates
+        spec_cols <- paste0("s",chr,LETTERS[1:nstate])
+        ext_cols <- paste0("mu",chr,LETTERS[1:nstate])
+        div_cols <- paste0("lambda",chr,LETTERS[1:nstate])
         
-        if(nstate == 2){if(2*nstate < z && z < 9){z = 9} else if (z > 10){break}}
-        if(nstate == 3){if(2*nstate < z && z < 9){z = 9} else if (z > 11){break}}
-        if(nstate == 4){if(2*nstate < z && z < 9){z = 9}}
+        # locate correct column to write mean rate into
+        s_agg <- which(colnames(rel_rates) == paste0("spec_",AP))
+        e_agg <- which(colnames(rel_rates) == paste0("ext_",AP))
+        d_agg <- which(colnames(rel_rates) == paste0("div_",AP))
         
-        # locate correct column (rate type in sets of 3 cols, state in sets of six)
-        noc <- colnames(rel_rates)[3*z-2]
-        cat <- colnames(rel_rates)[3*z-1]
-        diu <- colnames(rel_rates)[3*z]
-        
-        # calculate rate differences and write to main table
-        rel_rates[i,noc] <- as.numeric(rel_rates[i,noc]) - as.numeric(rel_rates[i,noc])
-        rel_rates[i,cat] <- as.numeric(rel_rates[i,cat]) - as.numeric(rel_rates[i,noc])
-        rel_rates[i,diu] <- as.numeric(rel_rates[i,diu]) - as.numeric(rel_rates[i,noc])
-  
-  ## alternative 2 - more accurate and complex  - one day I'll fix it...    
-        ### calculate difference between relevant rate estimates
-        #for(stt in LETTERS[1:nstate]){
-        #    for(e_rate in c("s","mu","lambda")){
-        #        noc <- which(colnames(evol) == paste0(e_rate,"00",stt))
-        #        cat <- which(colnames(evol) == paste0(e_rate,"01",stt))
-        #        diu <- which(colnames(evol) == paste0(e_rate,"11",stt))
-        #        
-        #        # locate correct column to write mean rate into
-        #        rel_rate_N <- which(colnames(evol) == paste0(e_rate,"_Noct_",stt))
-        #        rel_rate_C <- which(colnames(evol) == paste0(e_rate,"_Cath_",stt))
-        #        rel_rate_D <- which(colnames(evol) == paste0(e_rate,"_Diur_",stt))
-        #        
-        #        # calculate rate differences and write to main table
-        #        evol[i,rel_rate_N] <- as.numeric(clone[,noc]) - as.numeric(clone[,noc])
-        #        evol[i,rel_rate_C] <- as.numeric(clone[,cat]) - as.numeric(clone[,noc])
-        #        evol[i,rel_rate_D] <- as.numeric(clone[,diu]) - as.numeric(clone[,noc])
-        #    }
-        #}    
+        # calculate means and write to main table
+        rel_rates[i,s_agg] <- mean(as.numeric(clone[,which(colnames(clone) %in% spec_cols)]))
+        rel_rates[i,e_agg] <- mean(as.numeric(clone[,which(colnames(clone) %in% ext_cols)]))
+        rel_rates[i,d_agg] <- mean(as.numeric(clone[,which(colnames(clone) %in% div_cols)]))
     }
 }
 
+#store in separate object
+delim <- which(colnames(rel_rates) == "model")
+rate_diffs <- rel_rates[,1:delim]
+relat <- rel_rates[,delim:ncol(rel_rates)]
+
 # melt into long form
-relat <- pivot_longer(rel_rates, cols=1:ncol(rel_rates)-1, names_to = "relative_rate", values_to = "value") %>%
+relat <- pivot_longer(relat, cols=2:ncol(relat), names_to = "relative_rate", values_to = "value") %>%
     drop_na()
-    
-{relat$relative_rate <- gsub("s", "spec_", relat$relative_rate)
+
+# make col names coherent 
+relat$relative_rate <- gsub("s", "spec_", relat$relative_rate)
 relat$relative_rate <- gsub("mu", "ext_", relat$relative_rate)
 relat$relative_rate <- gsub("lambda", "div_", relat$relative_rate)
 
 relat$relative_rate <- gsub("00", "Noct_", relat$relative_rate)
 relat$relative_rate <- gsub("01", "Cath_", relat$relative_rate)
 relat$relative_rate <- gsub("11", "Diur_", relat$relative_rate)
-}
 
 relat$AP <- NA
 for(i in 1:nrow(relat)){
-    if(str_sub(relat$relative_rate[i], -6L, -3L) == "Noct"){relat$AP[i] <- "Noct"} 
-    if(str_sub(relat$relative_rate[i], -6L, -3L) == "Cath"){relat$AP[i] <- "Cath"}
-    if(str_sub(relat$relative_rate[i], -6L, -3L) == "Diur"){relat$AP[i] <- "Diur"}
+    if(str_sub(relat$relative_rate[i], -1L, -1L) == "N"){relat$AP[i] <- "Noct"} 
+    if(str_sub(relat$relative_rate[i], -1L, -1L) == "C"){relat$AP[i] <- "Cath"}
+    if(str_sub(relat$relative_rate[i], -1L, -1L) == "D"){relat$AP[i] <- "Diur"}
 }
 
-pdf(file="Evol rates relative to NOCT.pdf", width = 14, height = 8)
-relat %>%
-    mutate(relative_rate = factor(relative_rate, 
-                                  levels=c("spec_Noct_A", "spec_Cath_A", "spec_Diur_A", 
-                                           "ext_Noct_A", "ext_Cath_A", "ext_Diur_A", 
-                                           "spec_Noct_B", "spec_Cath_B", "spec_Diur_B", 
-                                           "ext_Noct_B", "ext_Cath_B", "ext_Diur_B", 
-                                           "spec_Noct_C", "spec_Cath_C", "spec_Diur_C", 
-                                           "ext_Noct_C", "ext_Cath_C", "ext_Diur_C", 
-                                           "spec_Noct_D", "spec_Cath_D", "spec_Diur_D",
-                                           "ext_Noct_D", "ext_Cath_D", "ext_Diur_D", 
-                                           "div_Noct_A", "div_Cath_A", "div_Diur_A", 
-                                           "div_Noct_B", "div_Cath_B", "div_Diur_B", 
-                                           "div_Noct_C", "div_Cath_C", "div_Diur_C", 
-                                           "div_Noct_D", "div_Cath_D", "div_Diur_D"))) %>%
+## remove outliers and plot
+d <- numeric()
+for(i in 1:nrow(relat)){if(strsplit(relat$model[i], "_")[[1]][2] == "tree1803"){d <- c(d,i)}}
+relat_NOL <- relat[-d,]
+
+#pdf(file="Evol rates relative to NOCT.pdf", width = 14, height = 8)
+relat_NOL %>%
+    mutate(relative_rate = factor(relative_rate, levels=c("spec_pec_N", "spec_pec_C", "spec_pec_D", 
+                                                          "ext_N", "ext_C", "ext_D", 
+                                                          "div_N", "div_C", "div_D"))) %>%
     ggplot(aes(x = relative_rate, y = value)) +
-    #geom_flat_violin(aes(fill = AP), position = position_nudge(x = .15, y = 0), alpha = .8) +
+    geom_flat_violin(aes(fill = AP), position = position_nudge(x = .15, y = 0), alpha = .8) +
     geom_point(aes(fill = AP), position = position_jitter(width = .05), shape = 21, size = 1.5, alpha = 0.3) + 
     geom_boxplot(aes(fill = AP), width = .15, outlier.shape = NA, alpha = 0.6) +
     theme_light() +
