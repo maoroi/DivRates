@@ -505,7 +505,7 @@ evo <- pivot_longer(evol, cols=1:ncol(evol)-1, names_to = "rate", values_to = "v
     drop_na()
 
 # additional info ('metadata') on each rate
-{type <- modtype <- rtype <- AP <- state <- character()
+{type <- modtype <- process <- AP <- state <- character()
 
 type[which(!is.na(str_extract(evo$rate, "s")))] <- "spec"
 type[which(!is.na(str_extract(evo$rate, "mu")))] <- "ext"
@@ -513,7 +513,7 @@ type[which(!is.na(str_extract(evo$rate, "lambda")))] <- "net.div"
 
 for (i in 1:nrow(evo)){
     modtype[i] <- str_extract(str_split(evo$model[i], "_")[[1]][1], "[0-9]")
-    rtype[i] <- str_sub(evo$rate[i], start = 1L, end = -2L)}
+    process[i] <- str_sub(evo$rate[i], start = 1L, end = -2L)}
 
 AP[which(str_sub(evo$rate, start = -3L, end = -2L) == "00")] <- "Noct"
 AP[which(str_sub(evo$rate, start = -3L, end = -2L) == "01")] <- "Cath"
@@ -522,8 +522,8 @@ AP[which(str_sub(evo$rate, start = -3L, end = -2L) == "11")] <- "Diur"
 state <- str_sub(evo$rate, start = -1L, end = -1L)
 }
 
-evo <- cbind(evo, type, modtype, rtype, AP, state)
-rm(type, modtype, rtype, AP, state)
+evo <- cbind(evo, type, modtype, process, AP, state)
+rm(type, modtype, process, AP, state)
 ####
 
 ## removing transitions between states that do not exist in the model
@@ -571,8 +571,8 @@ tb1 <- tb1[-d,]
 
 pdf(file="Evol rates est_no_outliers.pdf", width = 14, height = 8)
 # reorder to put speciation before extinction
-tb1$rtype <- factor(tb1$rtype, levels = c("s00","s01","s11","mu00","mu01","mu11","lambda00","lambda01","lambda11"))
-ggplot(tb1, aes(x = rtype, y = value)) +
+tb1$process <- factor(tb1$process, levels = c("s00","s01","s11","mu00","mu01","mu11","lambda00","lambda01","lambda11"))
+ggplot(tb1, aes(x = process, y = value)) +
     geom_flat_violin(aes(fill = AP), position = position_nudge(x = .15, y = 0), alpha = .8) +
     geom_point(aes(fill = AP), position = position_jitter(width = .05), shape = 21, size = 1.3, alpha = 0.3) + #
     geom_boxplot(aes(fill = AP), width = .15, outlier.shape = NA, alpha = 0.6) +
@@ -583,7 +583,7 @@ ggplot(tb1, aes(x = rtype, y = value)) +
     #scale_colour_manual(values = c("green3","gold2","dodgerblue3"))+#,"blue")) +
     guides(fill = "none", color = "none") +
     geom_rect(aes(xmin = 7 - 0.3, xmax = 9 + 0.55, ymin = 0 - 0.05, ymax = max(value, na.rm=TRUE) + 0.1),
-              color = "red", fill = "transparent", size = 1.2) 
+              color = "grey70", fill = "transparent", size = 1.3) 
 dev.off()
     
 tb1 %>% group_by(state) %>% tally()
@@ -651,7 +651,7 @@ for(i in 1:nrow(agg_NOL)){
     if(str_sub(agg_NOL$agg_rate[i], -1L, -1L) == "D"){agg_NOL$AP[i] <- "Diur"}
 }
 
-pdf(file="Aggregated evol rates est_no_outliers.pdf", width = 14, height = 8)
+##pdf(file="Aggregated evol rates est_no_outliers.pdf", width = 14, height = 8)
 agg_NOL %>%
     mutate(agg_rate = factor(agg_rate, levels=c("spec_N", "spec_C", "spec_D", "ext_N", "ext_C", "ext_D", "div_N", "div_C", "div_D"))) %>%
     ggplot(aes(x = agg_rate, y = value)) +
@@ -665,7 +665,7 @@ agg_NOL %>%
         scale_colour_manual(values = c("green3","gold2","dodgerblue3"))+#,"blue")) +
         guides(fill = "none", color = "none") +
         geom_rect(aes(xmin = 7 - 0.3, xmax = 9 + 0.55, ymin = 0 - 0.05, ymax = max(value, na.rm=TRUE) + 0.1),
-                  color = "red", fill = "transparent", size = 1.2) 
+                  color = "grey70", fill = "transparent", size = 1.3) 
 dev.off()
 
 
@@ -733,15 +733,6 @@ relat <- rel_rates[,delim:ncol(rel_rates)]
 relat <- pivot_longer(relat, cols=2:ncol(relat), names_to = "relative_rate", values_to = "value") %>%
     drop_na()
 
-# make col names coherent 
-relat$relative_rate <- gsub("s", "spec_", relat$relative_rate)
-relat$relative_rate <- gsub("mu", "ext_", relat$relative_rate)
-relat$relative_rate <- gsub("lambda", "div_", relat$relative_rate)
-
-relat$relative_rate <- gsub("00", "Noct_", relat$relative_rate)
-relat$relative_rate <- gsub("01", "Cath_", relat$relative_rate)
-relat$relative_rate <- gsub("11", "Diur_", relat$relative_rate)
-
 relat$AP <- NA
 for(i in 1:nrow(relat)){
     if(str_sub(relat$relative_rate[i], -1L, -1L) == "N"){relat$AP[i] <- "Noct"} 
@@ -756,22 +747,20 @@ relat_NOL <- relat[-d,]
 
 #pdf(file="Evol rates relative to NOCT.pdf", width = 14, height = 8)
 relat_NOL %>%
-    mutate(relative_rate = factor(relative_rate, levels=c("spec_pec_N", "spec_pec_C", "spec_pec_D", 
-                                                          "ext_N", "ext_C", "ext_D", 
-                                                          "div_N", "div_C", "div_D"))) %>%
+    mutate(relative_rate = factor(relative_rate, levels=c("spec_N", "spec_C", "spec_D", "ext_N", 
+                                                          "ext_C", "ext_D", "div_N", "div_C", "div_D"))) %>%
     ggplot(aes(x = relative_rate, y = value)) +
     geom_flat_violin(aes(fill = AP), position = position_nudge(x = .15, y = 0), alpha = .8) +
-    geom_point(aes(fill = AP), position = position_jitter(width = .05), shape = 21, size = 1.5, alpha = 0.3) + 
+    geom_point(aes(fill = AP), position = position_jitter(width = .05), shape = 21, 
+               size = 1.5, alpha = 0.3) + 
     geom_boxplot(aes(fill = AP), width = .15, outlier.shape = NA, alpha = 0.6) +
     theme_light() +
-    theme(axis.text.x = element_text(vjust = 1, hjust = 0.5, angle = 80)) + # 
-    scale_fill_manual(values = cols <- c("#33DD00","#FFCC00","#2233FF"))+#,"grey")) +
-    # the below line should be used for coloring boxplots by AP with the argument 'colour='
-    scale_colour_manual(values = c("green3","gold2","dodgerblue3"))+#,"blue")) +
-    guides(fill = "none", color = "none")
+    theme(axis.text.x = element_text(vjust = 1, hjust = 0.5)) + #, angle = 80)) + # 
+    scale_fill_manual(values = cols <- c("#33DD00","#FFCC00","#2233FF")) +
+    guides(fill = "none", color = "none") +
+    geom_rect(aes(xmin = 7 - 0.3, xmax = 9 + 0.65, ymin = -0.1 - 0.05, ymax = max(value, na.rm=TRUE) + 0.05),
+              color = "grey70", fill = "transparent", size = 1.3)
 dev.off()
-
-
 
 
 ### 2.3.2 Transition rates ----------------------------------------------------
