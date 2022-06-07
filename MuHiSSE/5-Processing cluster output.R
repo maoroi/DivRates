@@ -31,7 +31,7 @@ score$tree <- score$npar <- score$states <- score$type <- score$BIC <- NA
 
 
 ## 1.1 Extract model parameters -----------------------------------------------
-# extracting model parameters from file name
+# extracting model configuration from file name
 for (i in 1:nrow(score)){
     score$type[i] <- gsub("[0-9]", "", strsplit(rownames(score[i,]),"_")[[1]][1])       # model type
     score$states[i] <- as.numeric(gsub("[^0-9]", "", strsplit(rownames(score[i,]),"_")[[1]][1]))    # no. of hidden states
@@ -74,11 +74,6 @@ tert <- score[which(score$type %in% c("CID","MuHiSSE","vrCID","vrMuHiSSE")),]
 ## 1.2 Model selection ---------------------------------------------------------
 
 ord <- tert
-# ordering by AICc or BIC
-#ordA <- tert[order(tert$AICc),]
-#ordA <- ordA[,c("tree","type","states","loglik","npar","AIC","AICc","BIC")]
-#ordB <- tert[order(tert$BIC),]
-#ordB <- ordB[,c("tree","type","states","loglik","npar","AIC","AICc","BIC")]
 
 ordbyt <- data.frame()
 # calculate relative model support (delta AICc) for each tree
@@ -103,7 +98,7 @@ for (z in unique(ord$tree)) {
     dat$weight <- dat$rel_lik / sum(dat$rel_lik)
     ordbyt <- rbind(ordbyt, dat[order(dat$diff_BIC, decreasing = FALSE),])
 }
-ordbytB<- ordbyt[order(ordbyt$tree, ordbyt$BIC),]
+ordbytB <- ordbyt[order(ordbyt$tree, ordbyt$BIC),]
 
 
 ## 1.3 Support summary plots --------------------------------------------------
@@ -115,13 +110,13 @@ setwd("C:/Users/Roi Maor/Desktop/2nd Chapter/DivRates/MuHiSSE/Output")
 ## plotting likelihood as function of tree variant and model type
 
 # comparing all models by BIC, divided to model type and no. of states, grouped by tree
-pdf(file="Model support ordered_MCC marked.pdf", width = 15, height = 10)
+pdf(file="1b- Model support all_ordered_MCC marked_01JUN.pdf", width = 15, height = 10)
 df1 <- tert[tert$states != 1,]
 df2 <- subset(df1, df1$tree =="MCC")    # get only MCC models separately
 #par(mfrow=c(2,1))
 ggplot(df1, aes(x = reorder(tree, AICc, FUN = min), y = AICc, colour = as.factor(states))) +
     geom_point(alpha= .75, size = 3) + 
-    geom_point(data = df2, aes(tree, AICc), colour = 'black', shape = 1, size = 3) + 
+    geom_point(data = df2, aes(tree, AICc), colour = 'grey45', shape = 1, size = 3) + 
     facet_wrap(~type) + 
     theme_light() +
     theme(axis.text.x = element_text(angle = 90, vjust = 1, hjust = 1, size = 5)) +
@@ -132,7 +127,7 @@ ggplot(df1, aes(x = reorder(tree, AICc, FUN = min), y = AICc, colour = as.factor
 
 ggplot(df1, aes(x = reorder(tree, BIC, FUN = min), y = BIC, colour = as.factor(states))) +
     geom_point(alpha= .75, size = 3) + 
-    geom_point(data = df2, aes(tree, BIC), colour = "black", shape = 1, size = 3) + 
+    geom_point(data = df2, aes(tree, BIC), colour = "grey75", shape = 1, size = 3) + 
     facet_wrap(~type) + 
     theme_light() +
     theme(axis.text.x = element_text(angle = 90, vjust = 1, hjust = 1, size = 5)) +
@@ -219,10 +214,9 @@ varsB <- ordbytB[which(ordbytB$tree != "MCC"),]
 vrA <- varsA[which(varsA$type %in% c("vrCID", "vrMuHiSSE")),]
 vrB <- varsB[which(varsB$type %in% c("vrCID", "vrMuHiSSE")),]
 
-vr2 <- filter(vars, type %in% c("vrCID", "vrMuHiSSE")) %>%
-    filter(states != 6) %>%
-    filter(diff_BIC != 0)
-vr4 <- filter(vars, diff_BIC == 0)
+# the zero values mess with the distribution curve so I plot them afterwards
+vrB2 <- filter(varsB, diff_BIC != 0)
+vrB4 <- filter(varsB, diff_BIC == 0)
 
 #vrci <- vars[which(vars$type == "vrCID"),]
 #vrsse <- vars[(which(vars$type == "vrMuHiSSE")),]
@@ -253,7 +247,7 @@ vr4 <- filter(vars, diff_BIC == 0)
 #    scale_fill_manual(values = c("#5A4A6F", "#E47250",  "#EBB261", "#9D5A6C","2CD11E")) +
 #    scale_colour_manual(values = c("#5A4A6F", "#E47250",  "#EBB261", "#9D5A6C","2CD11E")) 
    
-pdf(file = "VR models relative support by diff_AICc.pdf", width = 15, height = 10)
+pdf(file = "1- VR relative model support by AICc_light_01JUN.pdf", width = 12, height = 8)
 ggplot(data = vrA, aes(y = diff_AICc, x = as.factor(states), fill = as.factor(states))) +
     geom_flat_violin(position = position_nudge(x = .2, y = 0), alpha = .8) +
     geom_point(aes(y = diff_AICc, x = as.factor(states), color = as.factor(states)), 
@@ -270,27 +264,48 @@ ggplot(data = vrA, aes(y = diff_AICc, x = as.factor(states), fill = as.factor(st
     scale_color_viridis_d(option = "viridis", begin = 0.1, end = .95, alpha = 1, direction = -1) +
     #scale_fill_manual(values = c("#5A4A6F", "#E47250",  "#EBB261", "#9D5A6E")) +
     #scale_colour_manual(values = c("#5A4A6F", "#E47250",  "#EBB261", "#9D5A6E")) +
-    theme_minimal(base_size = 12) 
+    theme_light(base_size = 24) 
 dev.off()
 
-pdf(file = "VR models relative support by diff_BIC.pdf", width = 15, height = 10)
-ggplot(data = vrB, aes(y = diff_BIC, x = as.factor(states), fill = as.factor(states))) +
-    geom_flat_violin(position = position_nudge(x = .2, y = 0), alpha = .8) +
-    geom_point(aes(y = diff_BIC, x = as.factor(states), color = as.factor(states)), 
-               position = position_jitter(width = .1), size = 2, alpha = 0.6) +
+pdf(file = "Fig 2a- Relative model support by BIC_light_07JUN.pdf", width = 12, height = 8)
+ggplot(data = varsB, aes(x = diff_BIC, y = as.factor(states), fill = as.factor(states))) +
+    #geom_flat_violin(position = position_nudge(x = .2, y = 0), alpha = .8) +
+    geom_density_ridges(aes(x = diff_BIC, y = as.factor(states), color = as.factor(states)),
+                        jittered_points = TRUE, position = position_raincloud(adjust_vlines = TRUE, height = 0.1),
+                        rel_min_height = 0.01, scale = 0.7, bandwidth = 5, size = 0.2, alpha = 0.7) +
+    #geom_point(aes(x = diff_BIC, y = as.factor(states), color = as.factor(states)), 
+    #           position = position_jitter(width = .01), size = 2, shape = 21, alpha = 0.6) +
     geom_boxplot(width = .15, outlier.shape = NA, alpha = 0.6) +
     guides(fill = "none", color = "none") + # don't show a legend
-    #labs(color = "States", fill = "States") + # in case a legend is needed
     xlab("No. of states") +
-    facet_wrap(~type,) +
+    facet_wrap(~type) +
+    coord_flip() +
     expand_limits(x = 5.25) +
+    scale_fill_viridis_d(option = "inferno", begin = 0.1, end = .95, alpha = 0.8, direction = -1) +
+    scale_color_viridis_d(option = "inferno", begin = 0.1, end = .95, alpha = 1, direction = -1) +
+    theme_light(base_size = 24) 
+dev.off()
+
+pdf(file = "Fig 2b- Relative model support by BIC_light_07JUN.pdf", width = 12, height = 9)
+p <- ggplot(data = vrB2, aes(y = diff_BIC, x = as.factor(states), fill = as.factor(states))) +
+    geom_flat_violin(position = position_nudge(x = .2, y = 0), alpha = .8) +
+    geom_point(aes(y = diff_BIC, x = as.factor(states), fill = as.factor(states)), 
+               position = position_jitter(width = .03), size = 0.8, alpha = 0.5, shape = 21) +
+    geom_boxplot(width = .15, outlier.shape = NA, alpha = 0.6) +
+    guides(fill = "none", color = "none") + # don't show a legend
+    xlab("No. of states") +
+    #facet_wrap(~type, scales = "fixed", nrow = 2) +
+    facet_grid(. ~ type, scales = "free", space='free') +
+    expand_limits(x = 6) +
     scale_fill_viridis_d(option = "inferno", begin = 0.1, end = 0.9, alpha = 0.8, direction = -1) +
     scale_color_viridis_d(option = "inferno", begin = 0.1, end = 0.9, alpha = 1, direction = -1) +
-    theme_minimal(base_size = 12) 
+    theme_light(base_size = 24)
+p +  geom_point(data = vrB4, aes(y = diff_BIC, x = as.factor(states), color = as.factor(states)),
+                position = position_jitter(width = .1), size = 1.5, alpha = 0.6, col = "#00BDFF") 
 dev.off()
 
 # plotting support by no. states with trendlines to show that the pattern is uniform accross trees
-pdf(file = "Model support by states tree-wise trendlines.pdf", width = 7, height = 8.5)
+pdf(file = "1c- Model support by states tree-wise trendlines_01_JUN.pdf", width = 7, height = 8.5)
 ggplot(varsA,aes(x=states, AICc, colour = reorder(tree, AICc, FUN = mean), group = tree)) +
     geom_point(alpha= .5, size = 2) +
     # use the below if need to plot MCC along with tree variants
@@ -331,22 +346,23 @@ dev.off()
 #dev.off()
 
 # comparing model type performance
-pdf(file="model type performance by tree_AICc.pdf", width = 15, height = 10)
-ggplot(ordbytA, aes(x=states, AICc, colour = type, group=type)) +
+pdf(file="2- model type performance by tree_AICc_01JUN.pdf", width = 15, height = 10)
+ggplot(varsA, aes(x=states, AICc, colour = type, group=type)) +
     geom_point(alpha= .5, size = 3) + 
-    geom_line(size = 1.5, alpha = 0.5) +
+    geom_line(size = 1.2, alpha = 0.85) +
     theme_light() +
-    facet_wrap(~tree, nrow = 6) + 
+    facet_wrap(~tree, nrow = 5) + 
     scale_color_viridis_d(option = "viridis", #inferno, turbo, mako
                           begin = 0, end = .95, direction = -1)
 dev.off()
 
-pdf(file="model type performance by tree_BIC.pdf", width = 15, height = 10)
-ggplot(ordbytB, aes(x=states, BIC, colour = type, group=type)) +
+pdf(file="2- model type performance by tree_BIC_01JUN.pdf", width = 15, height = 10)
+#pdf(file="FigS1 - model type performance by tree_BIC_04JUN.pdf", width = 15, height = 10)
+ggplot(varsB, aes(x=states, BIC, colour = type, group=type)) +
     geom_point(alpha= .5, size = 3) +  
-    geom_line(size = 1.5, alpha = 0.5) +
+    geom_line(size = 1.2, alpha = 0.85) +
     theme_light() +
-    facet_wrap(~tree, nrow = 6) + 
+    facet_wrap(~tree, nrow = 5) + 
     scale_color_viridis_d(option = "inferno", #inferno, turbo, mako
                           begin = 0, end = .9, direction = -1)
 dev.off()
@@ -355,29 +371,47 @@ dev.off()
 # same as above but trees ordered by BIC (this code works, but tree labels are gone)
 srd <- ordbytB[order(ordbytB$BIC),] 
 sru <- unique(srd$tree)
-for(i in 1:nrow(ordbytB)){ordbytB$ordBIC[i] <- which(sru == ordbytB$tree[i])}
-
-ggplot(ordbytB, aes(x=states, BIC, colour = type, group=type)) +
-    geom_point(alpha= .5, size = 3) +  
-    geom_line(size = 1.5, alpha = 0.5) +
-    theme_light() +
-    #facet_grid(ordBIC ~ ., labeller=tree_labeller) +
-    facet_wrap(~ordBIC, nrow = 6) + 
-    scale_color_viridis_d(option = "inferno", #inferno, turbo, mako
-                          begin = 0, end = .9, direction = -1)
+names(sru) <- sru
+#   for(i in 1:nrow(ordbytB)){ordbytB$ordBIC[i] <- which(sru == ordbytB$tree[i])}
+#   
+#   ggplot(ordbytB, aes(x=states, BIC, colour = type, group=type)) +
+#       geom_point(alpha= .5, size = 3) +  
+#       geom_line(size = 1.5, alpha = 0.5) +
+#       theme_light() +
+#       facet_grid(ordBIC ~ ., labeller = labeller(sru)) +
+#       facet_wrap(~ordBIC, nrow = 6) + 
+#       scale_color_viridis_d(option = "inferno", #inferno, turbo, mako
+#                             begin = 0, end = .9, direction = -1)
 
 
 ## quick tally - which trees support MuHiSSE3 better than MuHiSSE2 and MuHiSSE4
-trees <- data.frame(sru)
-trees$best <- NA
-# make a table of all the best models
-for(t in unique(ordbytB$tree)){
-    mods <- ordbytB[which(ordbytB$tree == t),]
-    best <- mods[which(mods$BIC == min(mods$BIC)),]
-    trees$best[which(trees$sru == t)] <- paste0(best$type,best$states)
-}
-table(trees$best)
+## all supported models (BIC <6)
+trees <- data.frame(ordbytB[which(ordbytB$diff_BIC < 6),])
+trees <- trees[-which(trees$tree == "MCC"),]
+trees$best <- paste0(trees$type, trees$states)
 
+## only best supported model per tree
+#   trees <- data.frame(sru)
+#   trees$best <- NA
+#   trees <- trees[-which(trees$sru == "MCC"),]
+#   # make a table of all the best models
+#   for(t in unique(ordbytB$tree)){
+#       mods <- ordbytB[which(ordbytB$tree == t),]
+#       best <- mods[which(mods$BIC == min(mods$BIC)),]
+#       trees$best[which(trees$sru == t)] <- paste0(best$type,best$states)
+#   }
+
+best <- table(trees$best)
+
+pdf(file="Figure 2- best configuration by BIC_04JUN.pdf", width = 7, height = 4)
+# Plot, and store x-coordinates of bars in xx
+xx <- barplot(best, xaxt = 'n', xlab = '', width = 0.85, ylim = c(0, max(best)+15),
+              ylab = "No. of trees") #main = "Support for model configuration",
+# Add text at top of bars
+text(x = xx, y = best, label = best, col = "darkred", pos = 3, font = 2)
+# Add x-axis labels 
+axis(1, at = xx, labels = names(best), tick = FALSE, line = -0.5, cex = 0.5)
+dev.off()
 
 # 2. Parameter estimates ------------------------------------------------------
 setwd("C:/Users/Roi Maor/Desktop/2nd Chapter/DivRates/MuHiSSE/Analyses/ResultsCluster")
@@ -462,14 +496,18 @@ for (state in 1:max(leading$states)) {
 ## I did not average separately competing models of the same tree variant because they 
 ## indicate different number of parameters so not comparable. 
 
-# weight estimated values by model support for all tree variants (not for MCC)
-mod_avg <- leading[which(leading$weight > 0.6),] # remove less-well supported trees
+# get all trees with equivocal results
+#equi <- leading[which(leading$tree %in% leading$tree[duplicated(leading$tree)]),]
 
-for (i in 1:length(which(mod_avg$tree != "MCC"))) {
+# weighing estimated values by model support for all tree variants (not for MCC)
+#mod_avg <- leading[which(leading$weight > 0.6),] # remove less-well supported trees
+mod_avg <- leading[which(leading$tree != "MCC"),]
+    
+for (i in 1:length(mod_avg$tree)) {
     mod_avg[i,12:ncol(mod_avg)] <- mod_avg$weight[i] * mod_avg[i,12:ncol(mod_avg)]
 } 
 
-# ** the below averaging is likely wrong so commented out **
+# ** the below averaging is likely wrong so commented out and was NOT used **
 #means <- colSums(mod_avg[which(mod_avg$tree != "MCC"),12:ncol(mod_avg)]) / 24 # mean rates
 #means <- c(rep(NA, 11), means)
 #mod_avg <- rbind(mod_avg, means)
@@ -483,12 +521,15 @@ for (i in 1:length(which(mod_avg$tree != "MCC"))) {
 
 ## 2.3 Rate estimates ---------------------------------------------------------
 
+non_rate <- c("loglik","AIC","AICc","BIC","type","states","npar","tree","diff_BIC","rel_lik","weight","ordBIC")
 ## split into evolutionary rates and character transition rates
-tran <- mod_avg[,-c(1:11)]
-tran <- tran[which(!is.na(str_extract(colnames(tran), "q")))] # transition rates only
+tran <- leading[,setdiff(colnames(leading), non_rate)]          # raw rate estimates
+#tran <- mod_avg[,-c(1:11)]                                     # weighted estimates
+tran <- tran[which(!is.na(str_extract(colnames(tran), "q")))]   # transition rates only
 
-evol <- mod_avg[,-c(1:11)]
-evol <- evol[which(is.na(str_extract(colnames(evol), "q")))] # all rates that are NOT transition rates
+evol <- leading[,setdiff(colnames(leading), non_rate)]          # raw estimates
+# evol <- mod_avg[,-c(1:11)]                                    # weigthed estimates
+evol <- evol[which(is.na(str_extract(colnames(evol), "q")))]    # rates that are NOT transition rates
 
 
 ### 2.3.1 Evolutionary rates --------------------------------------------------
@@ -505,7 +546,7 @@ evo <- pivot_longer(evol, cols=1:ncol(evol)-1, names_to = "rate", values_to = "v
     drop_na()
 
 # additional info ('metadata') on each rate
-{type <- modtype <- process <- AP <- state <- character()
+type <- modtype <- process <- AP <- state <- character()
 
 type[which(!is.na(str_extract(evo$rate, "s")))] <- "spec"
 type[which(!is.na(str_extract(evo$rate, "mu")))] <- "ext"
@@ -520,7 +561,7 @@ AP[which(str_sub(evo$rate, start = -3L, end = -2L) == "01")] <- "Cath"
 AP[which(str_sub(evo$rate, start = -3L, end = -2L) == "11")] <- "Diur"
 
 state <- str_sub(evo$rate, start = -1L, end = -1L)
-}
+
 
 evo <- cbind(evo, type, modtype, process, AP, state)
 rm(type, modtype, process, AP, state)
@@ -549,7 +590,7 @@ tb2 <- evo[which(evo$modtype == 3),] # only 3-state models
 tb3 <- evo[which(evo$modtype == 4),] # only 4-state models
 
 #### removing outliers 
-tb1[which(tb1$value > 1.25),] # identify trees w exceptionally high rate estimates
+tb1[which(tb1$value > 1.5),] # identify trees w exceptionally high rate estimates
 # find indices of all rates based on the problematic tree
 d <- numeric()
 for(i in 1:nrow(evo)){if(strsplit(evo$model[i], "_")[[1]][2] == "tree1803"){d <- c(d,i)}}
@@ -569,7 +610,7 @@ for(i in 1:nrow(evo)){if(strsplit(evo$model[i], "_")[[1]][2] == "tree1803"){d <-
 #    geom_point(data = tb1[d,], aes(x = rtype, y = value), colour = "red", size = 2)
 tb1 <- tb1[-d,]
 
-pdf(file="Evol rates est_no_outliers.pdf", width = 14, height = 8)
+pdf(file="4b- Evol rates est_no_outlier_01JUN.pdf", width = 14, height = 8)
 # reorder to put speciation before extinction
 tb1$process <- factor(tb1$process, levels = c("s00","s01","s11","mu00","mu01","mu11","lambda00","lambda01","lambda11"))
 ggplot(tb1, aes(x = process, y = value)) +
@@ -583,7 +624,7 @@ ggplot(tb1, aes(x = process, y = value)) +
     #scale_colour_manual(values = c("green3","gold2","dodgerblue3"))+#,"blue")) +
     guides(fill = "none", color = "none") +
     geom_rect(aes(xmin = 7 - 0.3, xmax = 9 + 0.55, ymin = 0 - 0.05, ymax = max(value, na.rm=TRUE) + 0.1),
-              color = "grey70", fill = "transparent", size = 1.3) 
+              color = "#FF7799", fill = "transparent", size = 1.3) 
 dev.off()
     
 tb1 %>% group_by(state) %>% tally()
@@ -651,28 +692,28 @@ for(i in 1:nrow(agg_NOL)){
     if(str_sub(agg_NOL$agg_rate[i], -1L, -1L) == "D"){agg_NOL$AP[i] <- "Diur"}
 }
 
-##pdf(file="Aggregated evol rates est_no_outliers.pdf", width = 14, height = 8)
+pdf(file="4- Aggregated evol rates est_no_outlier_01JUN.pdf", width = 14, height = 8)
 agg_NOL %>%
     mutate(agg_rate = factor(agg_rate, levels=c("spec_N", "spec_C", "spec_D", "ext_N", "ext_C", "ext_D", "div_N", "div_C", "div_D"))) %>%
     ggplot(aes(x = agg_rate, y = value)) +
         geom_flat_violin(aes(fill = AP), position = position_nudge(x = .15, y = 0), alpha = .8) +
-        geom_point(aes(fill = AP), position = position_jitter(width = .05), shape = 21, size = 1.5, alpha = 0.3) + 
+        geom_point(aes(fill = AP), position = position_jitter(width = .05), shape = 21, size = 1.5, alpha = 0.4) + 
         geom_boxplot(aes(fill = AP), width = .15, outlier.shape = NA, alpha = 0.6) +
-        theme_light() +
+        theme_light(base_size = 24) +
         theme(axis.text.x = element_text(vjust = 1, hjust = 0.5)) + #angle = 80, 
         scale_fill_manual(values = cols <- c("#33DD00","#FFCC00","#2233FF"))+#,"grey")) +
         # the below line should be used for coloring boxplots by AP with the argument 'colour='
         scale_colour_manual(values = c("green3","gold2","dodgerblue3"))+#,"blue")) +
         guides(fill = "none", color = "none") +
         geom_rect(aes(xmin = 7 - 0.3, xmax = 9 + 0.55, ymin = 0 - 0.05, ymax = max(value, na.rm=TRUE) + 0.1),
-                  color = "grey70", fill = "transparent", size = 1.3) 
+                  color = "#FF7799", fill = "transparent", size = 1.3) 
 dev.off()
 
 
 #### 2.3.1.3 Within-state relative rates --------------------------------------
 
-## in each state, take the differential between nocturnal rates and the rate in the other AP
-rel_rates <- evol[,-c(25:48)] ## exclude columns of states not in the model 
+## in each state, show the difference between nocturnal rates and diurnal or cathemeral
+rel_rates <- evol[,-c(25:48)] ## exclude columns of states not in any model 
 
 ## calculate rate differences
 for(z in 0:11){ # iterate over the 12 sets of rates(3 evol. rate types, up to 4 hidden states), 3 columns in each set (N,C, and D)
@@ -745,25 +786,26 @@ d <- numeric()
 for(i in 1:nrow(relat)){if(strsplit(relat$model[i], "_")[[1]][2] == "tree1803"){d <- c(d,i)}}
 relat_NOL <- relat[-d,]
 
-#pdf(file="Evol rates relative to NOCT.pdf", width = 14, height = 8)
+pdf(file="5- Evol rates relative to NOCT_01JUN.pdf", width = 14, height = 8)
 relat_NOL %>%
     mutate(relative_rate = factor(relative_rate, levels=c("spec_N", "spec_C", "spec_D", "ext_N", 
                                                           "ext_C", "ext_D", "div_N", "div_C", "div_D"))) %>%
     ggplot(aes(x = relative_rate, y = value)) +
     geom_flat_violin(aes(fill = AP), position = position_nudge(x = .15, y = 0), alpha = .8) +
     geom_point(aes(fill = AP), position = position_jitter(width = .05), shape = 21, 
-               size = 1.5, alpha = 0.3) + 
+               size = 1.5, alpha = 0.4) + 
     geom_boxplot(aes(fill = AP), width = .15, outlier.shape = NA, alpha = 0.6) +
-    theme_light() +
+    theme_light(base_size = 24) +
     theme(axis.text.x = element_text(vjust = 1, hjust = 0.5)) + #, angle = 80)) + # 
     scale_fill_manual(values = cols <- c("#33DD00","#FFCC00","#2233FF")) +
     guides(fill = "none", color = "none") +
     geom_rect(aes(xmin = 7 - 0.3, xmax = 9 + 0.65, ymin = -0.1 - 0.05, ymax = max(value, na.rm=TRUE) + 0.05),
-              color = "grey70", fill = "transparent", size = 1.3)
+              color = "#FF7799", fill = "transparent", size = 1.3)
 dev.off()
 
 
 ### 2.3.2 Transition rates ----------------------------------------------------
+
 tran$model <- str_replace(rownames(tran), ".RDS", "") # remove file suffix from model names
 
 # find and then remove model/s based on MCC tree
@@ -786,7 +828,7 @@ Trates <- Trates[-remove,]
 modtype <- rtype <- rclass <- character()
 for (i in 1:nrow(Trates)) {
     prefix <- str_split(Trates$model[i], "Mu")[[1]][1]
-    num <- str_extract(str_split(Trates$model[i], "_")[[1]][1], "[0-9]") # get # of states
+    num <- str_extract(str_split(Trates$model[i], "_")[[1]][1], "[0-9]") # get no. of states
     modtype[i] <- paste0(prefix,num)
     rtype[i] <- gsub("[A-H]_", "->", str_sub(Trates$rate[i], start = 2L, end = -2L)) # transition type
     if (rtype[i] %in% c("00->00","01->01","11->11")) {
@@ -806,30 +848,32 @@ tbr2 <- tbr1[which(tbr1$rclass == "character change"),]        # exclude hidden 
 tbr3 <- tbr2[which(tbr2$modtype == 3),]
 tbr4 <- tbr2[which(tbr2$modtype == 4),]
 
-## removing outlier tree
-d <- numeric()
-for(i in 1:nrow(Trates)){if(strsplit(Trates$model[i], "_")[[1]][2] == "tree1803"){d <- c(d,i)}}
-tbr5 <- tbr2[-d,]
+## removing outlier tree - 
+#d <- numeric()
+#for(i in 1:nrow(Trates)){if(strsplit(Trates$model[i], "_")[[1]][2] == "tree1803"){d <- c(d,i)}}
+#tbr5 <- tbr2[-d,]
 
-tbr6 <- tbr5
-tbr6[which(tbr6$value < 10^-6),3] <- 10^-6 # 10^-6 < 1/(total tree depth * total number of lineages)
+tbr5 <- tbr2
+tbr5[which(tbr5$value < 10^-6),3] <- 10^-6 # 10^-6 < 1/(total tree depth * total number of lineages)
 # rates below this threshold are expected to be undetectable given current amount of data
 
 
 # plot transition rate estimates
-pdf(file="Transition rates estimate_no_outlier.pdf", width = 10, height = 7)
-tbr5$rtype <- factor(tbr5$rtype, levels=c("N->C","C->N","C->D","D->C"))
-ggplot(tbr5, aes(x = rtype, y = log(value+0.0000000001), fill = rtype)) + # added 10^-10 to the rate estimates to deal with zeros (72 rows)
-    geom_flat_violin(position = position_nudge(x = .2, y = 0), alpha = .8) +
-    geom_point(colour = "grey20", position = position_jitter(width = .05), shape = 21, size = 1.3, alpha = 0.5) +
+tbr2$rtype <- factor(tbr2$rtype, levels=c("N->C","C->N","C->D","D->C"))
+pdf(file="6- Transition rates estimates_01JUN.pdf", width = 10, height = 7)
+#pdf(file="Fig. 4 - Transition rates estimates_04JUN.pdf", width = 15, height = 11)
+ggplot(tbr2, aes(x = rtype, y = log(value+0.0000000001), fill = rtype)) + # added 10^-10 to the rate estimates to deal with zeros (72 rows)
+    geom_flat_violin(position = position_nudge(x = .15, y = 0), alpha = .8) +
+    geom_point(colour = "grey20", position = position_jitter(width = .04), shape = 16, 
+               size = 1, alpha = 0.3) +
     geom_boxplot(width = .15, outlier.shape = NA, alpha = 0.6) +
-    geom_hline(aes(yintercept = log(10^-6), colour = 'red'), linetype = 2) + # this marks the effective rate of 0, because 10^-6 transitions per lineage per million years is 1 transition per 10000 lineages per 100 million years, which is unlikely to be detected when I examine <2500 lineages over 160 million years
-    theme_light() +
+    geom_hline(aes(yintercept = log(10^-6), colour = '#5A4A6F'), linetype = 2) + # this marks the effective rate of 0, because 10^-6 transitions per lineage per million years is 1 transition per 10000 lineages per 100 million years, which is unlikely to be detected when I examine <2500 lineages over 160 million years
+    theme_light(base_size = 20) +
     theme(axis.text.x = element_text(vjust = 1, hjust = 1)) +
-    annotate("rect", xmin = 0.45, xmax = 4.6, ymin = -24, ymax = log(10^-6)-0.1, alpha=0.4, fill="grey") +
+    annotate("rect", xmin = 0.45, xmax = 4.6, ymin = -24, ymax = log(10^-6)-0.1, alpha=0.6, fill="grey") +
     scale_fill_manual(values = cols <- c("#AA22BB","#EE4444","gold1","#33AAFF")) +
-    scale_colour_manual(values = c("#5A4A6F", "#E47250",  "#EBB261", "#9D5A6C","#5A4A6F", "#E47250",  "#EBB261", "#9D5A6C")) +
-    labs(y = "log(transition rate)", x = "Transition type (from -> to)") +
+    scale_colour_manual(values = c("#5A4A6F", "#E47250","#EBB261", "#9D5A6C","#5A4A6F","#E47250","#EBB261", "#9D5A6C")) +
+    labs(y = "log(transition rate)", x = "Direction of character transition (from -> to)") +
     #annotate("text", x=2.5, y=-16, label= "undetectable\nrange", size = 4.5) + 
     guides(fill = "none", color = "none") #+
     # Setting the limits of the y axis
@@ -842,8 +886,7 @@ dev.off()
 
 # order trees by best performing model (BIC)
 srtmod <- mod_avg[order(mod_avg$BIC),]
-srtmod <- srtmod[-which(srtmod$tree %in% c("1803","MCC")),] # remove MCC and tree w outlying rates
-slct <- srtmod[1:79,] # this eliminates the 50 worst performing trees (some have more than one model) 
+slct <- srtmod[1:78,] # this eliminates the 50 worst performing trees (some have more than one model) 
 
 # the below are trees that produce more than one supported model (in the full set and slct75, respectively)
 srtmod[which(srtmod$tree %in% c("3120","6760","6375","4420","2555","2417","3865")),c(1:11)]
@@ -968,16 +1011,34 @@ ggplot(trns1, aes(x = rtype, y = log(value+0.0000000001), fill = rtype)) + # add
 
 
 # 3. Follow up analyses -------------------------------------------------------
+
 library("hisse")
+
+setwd("C:/Users/Roi Maor/Desktop/2nd Chapter/DivRates/MuHiSSE/Analyses/ResultsCluster")
+
+
 ## 3.1 Reconstruction based on fitted models ----------------------------------
 
-mod <- readRDS(file="MuHiSSE2_tree6404.RDS")
-parest <- SupportRegionMuHiSSE(mod, n.points=1000, scale.int=0.1, desired.delta=2, min.number.points=10, verbose=TRUE)
+# repeating steps from MuHiSSE analysis ("4-ClusterCode.R")
 
-reco <- MarginReconMuHiSSE(tree, act3, f = freq, pars, hidden.states=1, 
-                           condition.on.survival=TRUE, root.type="madfitz", 
-                           root.p=NULL, AIC=NULL, get.tips.only=FALSE, 
-                           verbose=TRUE, n.cores=NULL, dt.threads=1)
+states <- data.frame(tree$tip.label, tree$tip.state, tree$tip.state)
+states_trans <- states
+for(i in 1:Ntip(tree)){
+    if(states[i,2] == 1){
+        states_trans[i,2] = 0
+        states_trans[i,3] = 0
+    }
+    if(states[i,2] == 2){
+        states_trans[i,2] = 0
+        states_trans[i,3] = 1
+    }
+    if(states[i,2] == 3){
+        states_trans[i,2] = 1
+        states_trans[i,3] = 1
+    }
+}
+
+mod <- readRDS(file="MuHiSSE2_tree6404.RDS")
 
 
 # 4. [ open ] -----------------------------------------------------------------
