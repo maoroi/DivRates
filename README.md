@@ -1,1 +1,1 @@
-# Rates of Character-(in)dependent evolution in mammals
+# Code files used for estimating rates of character-(in)dependent evolution in mammals
