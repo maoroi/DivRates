@@ -3,13 +3,13 @@ setwd("C:/Users/Roi Maor/Desktop/2nd Chapter/DivRates/MuHiSSE")
 
 library(hisse)  
 #> packageVersion('hisse')
-#[1] ‘1.9.13’
+#[1] '1.9.13'
 library(diversitree)
 #> packageVersion('diversitree')
-#[1] ‘0.9.11’
+#[1] '0.9.11'
 require(phytools)
 #> packageVersion('phytools')
-#[1] ‘0.6.99’
+#[1] '0.6.99'
 
 ## reproducible evironemnt using {renv}: The packages used in this project are recorded into a lockfile, renv.lock.
 ## use renv::restore() to reinstall all of the packages as declared in the lockfile.
@@ -170,7 +170,7 @@ set_to_0 <- 4*(1:n)-1
     drops <- c(2,5,6,8, 10,13,14,16, 18,21,22,24, 26,29,30,32, 34,37,38,40, 42,45,46,48, 50,53,54,56, 58,61,62,64)
 #} else {stop(paste0("n too large"))}
 
-# div rates 
+# div rates for CID
 for (z in 1:n) {reps <- rep(z, 4)
 if (z == 1) {turnover <- reps} else {turnover <- c(turnover, reps)}}
 extinction.fraction <- rep(1,4*n) 
@@ -202,3 +202,50 @@ CID_model <- MuHiSSE(phy=tree, data=states.trans, f=f,
                      trans.rate=trans.rate.mod, 
                      turnover.upper=1000, # excluding unreasonable parameter space to speed up (see new vignette)
                      sann = TRUE) # starting value optimiser on 
+# MuHiSSE model
+n <- 2
+set_to_0 <- 4*(1:n)-1
+TO_rates <- c(1,2,0,3, 4,5,0,6, 7,8,0,9, 10,11,0,12, 13,14,0,15, 16,17,0,18, 19,20,0,21, 22,23,0,24)
+drops <- c(2,5,6,8, 10,13,14,16, 18,21,22,24, 26,29,30,32, 34,37,38,40, 42,45,46,48, 50,53,54,56, 58,61,62,64)
+
+# div rates for MuHiSSE
+turnover <- TO_rates[1:(4*n)]
+extinction.fraction <- rep(1,4*n) 
+extinction.fraction[set_to_0] <- 0
+
+# trans rates
+trans.rate <- TransMatMakerMuHiSSE(hidden.traits=n-1, include.diagonals = FALSE, cat.trans.vary = TRUE)
+trans.rate.mod <- ParDrop(trans.rate, drops[1:(4*n)])   
+trans.rate.mod[,set_to_0] <- 0
+diag(trans.rate.mod) <- NA
+
+
+# 3 Extending rate matrix beyond 8 states ------------------------------------
+# MuHiSSE model
+n <- 2
+set_to_0 <- 4*(1:n)-1
+TO_rates <- c(1,2,0,3, 4,5,0,6, 7,8,0,9, 10,11,0,12, 13,14,0,15, 16,17,0,18, 19,20,0,21, 22,23,0,24)
+drops <- c(2,5,6,8, 10,13,14,16, 18,21,22,24, 26,29,30,32, 34,37,38,40, 42,45,46,48, 50,53,54,56, 58,61,62,64)
+
+# div rates for MuHiSSE
+turnover <- TO_rates[1:(4*n)]
+extinction.fraction <- rep(1,4*n) 
+extinction.fraction[set_to_0] <- 0
+
+# trans rates
+trans.rate <- TransMatMakerMuHiSSE(hidden.traits=n-1, include.diagonals = FALSE, cat.trans.vary = FALSE)
+trans.rate.mod <- ParDrop(trans.rate, drops[1:(4*n)])   
+trans.rate.mod[,set_to_0] <- 0
+diag(trans.rate.mod) <- NA
+
+## Adding onto the rate matrix
+# columns
+filler <- matrix(NA, ncol=4, nrow = nrow(trans.rate.mod))
+trans.rate.app <- cbind(trans.rate.mod, filler)
+colnames(trans.rate.app)[33:36] <- c("(00I)","(01I)","(10I)","(11I)")
+# rows
+filler <- matrix(NA, nrow=4, ncol = ncol(trans.rate.app))
+trans.rate.app <- rbind(trans.rate.app, filler)
+rownames(trans.rate.app)[33:36] <- c("(00I)","(01I)","(10I)","(11I)")
+
+# claculating the correct indices is a pain if not starting from the source code 
