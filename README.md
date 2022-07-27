@@ -1,2 +1,1 @@
-# DivRates
-# Updating the code used for Chapter 3 to include Faurby & Svenning (2015) phylogeny 
+# Code files used for estimating rates of character-(in)dependent evolution in mammals
