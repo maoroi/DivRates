@@ -163,50 +163,50 @@ dev.off()
 #dev.off()
 
 #pdf(file = "Model support by no. of states.pdf", width = 7, height = 8.5)
-#library(ggridges)
+library(ggridges)
 
 ## code for this figure adapted from: https://ourcodingclub.github.io/tutorials/dataviz-beautification-synthesis/#distributions 
 # This code loads the function in the working environment
-source("https://gist.githubusercontent.com/benmarwick/2a1bb0133ff568cbe28d/raw/fb53bd97121f7f9ce947837ef1a4c65a73bffb3f/geom_flat_violin.R")
+#source("https://gist.githubusercontent.com/benmarwick/2a1bb0133ff568cbe28d/raw/fb53bd97121f7f9ce947837ef1a4c65a73bffb3f/geom_flat_violin.R")
 # theme from: https://neuroconscience.wordpress.com/2018/03/15/introducing-raincloud-plots/
-theme_niwot <- function(){
-    theme_bw() +
-        theme(text = element_text(family = "Helvetica Light"),
-              axis.text = element_text(size = 16),
-              axis.title = element_text(size = 18),
-              axis.line.x = element_line(color="black"),
-              axis.line.y = element_line(color="black"),
-              panel.border = element_blank(),
-              panel.grid.major.x = element_blank(),
-              panel.grid.minor.x = element_blank(),
-              panel.grid.minor.y = element_blank(),
-              panel.grid.major.y = element_blank(),
-              plot.margin = unit(c(1, 1, 1, 1), units = , "cm"),
-              plot.title = element_text(size = 18, vjust = 1, hjust = 0),
-              legend.text = element_text(size = 12),
-              legend.title = element_blank(),
-              legend.position = c(0.95, 0.15),
-              legend.key = element_blank(),
-              legend.background = element_rect(color = "black",
-                                               fill = "transparent",
-                                               size = 2, linetype = "blank"))
-}
-    
-raincloud_theme = theme(
-    text = element_text(size = 10),
-    axis.title.x = element_text(size = 16),
-    axis.title.y = element_text(size = 16),
-    axis.text = element_text(size = 14),
-    axis.text.x = element_text(angle = 45, vjust = 0.5),
-    legend.title=element_text(size=16),
-    legend.text=element_text(size=16),
-    legend.position = "right",
-    plot.title = element_text(lineheight=.8, face="bold", size = 16),
-    panel.border = element_blank(),
-    panel.grid.minor = element_blank(),
-    panel.grid.major = element_blank(),
-    axis.line.x = element_line(colour = 'black', size=0.5, linetype='solid'),
-    axis.line.y = element_line(colour = 'black', size=0.5, linetype='solid'))
+#theme_niwot <- function(){
+#    theme_bw() +
+#        theme(text = element_text(family = "Helvetica Light"),
+#              axis.text = element_text(size = 16),
+#              axis.title = element_text(size = 18),
+#              axis.line.x = element_line(color="black"),
+#              axis.line.y = element_line(color="black"),
+#              panel.border = element_blank(),
+#              panel.grid.major.x = element_blank(),
+#              panel.grid.minor.x = element_blank(),
+#              panel.grid.minor.y = element_blank(),
+#              panel.grid.major.y = element_blank(),
+#              plot.margin = unit(c(1, 1, 1, 1), units = , "cm"),
+#              plot.title = element_text(size = 18, vjust = 1, hjust = 0),
+#              legend.text = element_text(size = 12),
+#              legend.title = element_blank(),
+#              legend.position = c(0.95, 0.15),
+#              legend.key = element_blank(),
+#              legend.background = element_rect(color = "black",
+#                                               fill = "transparent",
+#                                               size = 2, linetype = "blank"))
+#}
+#    
+#raincloud_theme = theme(
+#    text = element_text(size = 10),
+#    axis.title.x = element_text(size = 16),
+#    axis.title.y = element_text(size = 16),
+#    axis.text = element_text(size = 14),
+#    axis.text.x = element_text(angle = 45, vjust = 0.5),
+#    legend.title=element_text(size=16),
+#    legend.text=element_text(size=16),
+#    legend.position = "right",
+#    plot.title = element_text(lineheight=.8, face="bold", size = 16),
+#    panel.border = element_blank(),
+#    panel.grid.minor = element_blank(),
+#    panel.grid.major = element_blank(),
+#    axis.line.x = element_line(colour = 'black', size=0.5, linetype='solid'),
+#    axis.line.y = element_line(colour = 'black', size=0.5, linetype='solid'))
 
 ## plotting support by no. states, aggregaetd over all variants
 varsA <- ordbytA[which(ordbytA$tree != "MCC"),]
@@ -249,7 +249,7 @@ vrB4 <- filter(varsB, diff_BIC == 0)
    
 pdf(file = "1- VR relative model support by AICc_light_01JUN.pdf", width = 12, height = 8)
 ggplot(data = vrA, aes(y = diff_AICc, x = as.factor(states), fill = as.factor(states))) +
-    geom_flat_violin(position = position_nudge(x = .2, y = 0), alpha = .8) +
+    geom_flat_violin(position = position_nudge(x = .2, y = 0), alpha = .8) +   #  adjust = 0.5 controls curve smoothing
     geom_point(aes(y = diff_AICc, x = as.factor(states), color = as.factor(states)), 
                position = position_jitter(width = .1), size = 2, alpha = 0.6) +
     geom_boxplot(width = .15, outlier.shape = NA, alpha = 0.6) +
@@ -267,17 +267,50 @@ ggplot(data = vrA, aes(y = diff_AICc, x = as.factor(states), fill = as.factor(st
     theme_light(base_size = 24) 
 dev.off()
 
-pdf(file = "Fig 2a- Relative model support by BIC_light_07JUN.pdf", width = 12, height = 8)
+## alternative plotting function because geom_flat_violin() was having issues in the panel of best supported models
+pdf(file = "2- Relative model support by BIC_light_30JUN.pdf", width = 24, height = 8)
+ggplot(varsB, aes(x = diff_BIC, y = as.factor(states), fill = as.factor(states))) +
+    geom_density_ridges(position = position_nudge(y = 0.14), scale = 0.7, 
+                        rel_min_height = 0.01, bandwidth = 7) +
+    geom_point(aes(), position = position_jitter(height = .05), size = .85, alpha = 0.4, shape = 16) +
+    geom_boxplot(width = .15, outlier.shape = NA, alpha = 0.7) +
+    guides(fill = "none", color = "none") + # don't show a legend
+    scale_fill_viridis_d(option = "inferno", begin = 0.1, end = 0.9, alpha = 0.8, direction = -1) +
+    scale_color_viridis_d(option = "inferno", begin = 0.1, end = 0.9, alpha = 1, direction = -1) +
+    facet_wrap(~type, nrow = 1) + 
+    ylab("No. of states") +
+    coord_flip() +
+    theme_light(base_size = 28)
+dev.off()
+
+# No. of estimated parameters instead of No. of states
+pdf(file = "2.1- Relative model support by Est_Params_30JUN.pdf", width = 20, height = 18)
+ggplot(varsB, aes(x = diff_BIC, y = npar, fill = as.factor(states))) +
+    geom_density_ridges(position = position_nudge(y = 0.05), scale = 1.2, 
+                        rel_min_height = 0.01, bandwidth = 8) +
+    geom_point(position = position_jitter(height = .03), size = 0.7, alpha = 0.4, shape = 16) +
+    guides(fill = "none", color = "none") + # don't show a legend
+    scale_fill_viridis_d(option = "inferno", begin = 0.1, end = 0.9, alpha = 0.8, direction = -1) +
+    scale_color_viridis_d(option = "inferno", begin = 0.1, end = 0.9, alpha = 1, direction = -1) +
+    facet_wrap(~type, nrow = 4) + 
+    coord_flip() +
+    ylab("No. of estimated parameters") +
+    theme_light(base_size = 26)
+dev.off()
+
+pdf(file = "2a- Relative model support by BIC_light_07JUN.pdf", width = 12, height = 8)
 ggplot(data = varsB, aes(x = diff_BIC, y = as.factor(states), fill = as.factor(states))) +
-    #geom_flat_violin(position = position_nudge(x = .2, y = 0), alpha = .8) +
-    geom_density_ridges(aes(x = diff_BIC, y = as.factor(states), color = as.factor(states)),
-                        jittered_points = TRUE, position = position_raincloud(adjust_vlines = TRUE, height = 0.1),
-                        rel_min_height = 0.01, scale = 0.7, bandwidth = 5, size = 0.2, alpha = 0.7) +
-    #geom_point(aes(x = diff_BIC, y = as.factor(states), color = as.factor(states)), 
-    #           position = position_jitter(width = .01), size = 2, shape = 21, alpha = 0.6) +
+    geom_flat_violin(position = position_nudge(x = .2, y = 0), alpha = .8) +  ##  adjust = 0.5 controls curve smoothing
+    #geom_density_ridges(aes(x = diff_BIC, y = as.factor(states), colour = as.factor(states)),
+    #                    jittered_points = TRUE, 
+    #                    position = position_raincloud(adjust_vlines = TRUE, height = -0.1),
+    #                    rel_min_height = 0.01, scale = 0.7, bandwidth = 7, size = 0.1, alpha = 0.7) +
+    geom_point(aes(x = diff_BIC, y = as.factor(states), color = "grey20"), 
+               position = position_jitter(height = .05), size = 1.2, shape = 21, alpha = 0.6) +
     geom_boxplot(width = .15, outlier.shape = NA, alpha = 0.6) +
     guides(fill = "none", color = "none") + # don't show a legend
-    xlab("No. of states") +
+    ylab("No. of states") +
+    xlab("Difference in BIC") +
     facet_wrap(~type) +
     coord_flip() +
     expand_limits(x = 5.25) +
@@ -286,23 +319,26 @@ ggplot(data = varsB, aes(x = diff_BIC, y = as.factor(states), fill = as.factor(s
     theme_light(base_size = 24) 
 dev.off()
 
-pdf(file = "Fig 2b- Relative model support by BIC_light_07JUN.pdf", width = 12, height = 9)
+# models with diff_BIC = 0 not included in density curves 
+pdf(file = "2b- Relative model support by BIC_light_07JUN.pdf", width = 12, height = 9)
 p <- ggplot(data = vrB2, aes(y = diff_BIC, x = as.factor(states), fill = as.factor(states))) +
-    geom_flat_violin(position = position_nudge(x = .2, y = 0), alpha = .8) +
+    geom_flat_violin(position = position_nudge(x = .2, y = 0), alpha = .8) + #  adjust = 0.5 controls curve smoothing
     geom_point(aes(y = diff_BIC, x = as.factor(states), fill = as.factor(states)), 
-               position = position_jitter(width = .03), size = 0.8, alpha = 0.5, shape = 21) +
+               position = position_jitter(width = .03), size = 1, alpha = 0.5, shape = 21) +
     geom_boxplot(width = .15, outlier.shape = NA, alpha = 0.6) +
     guides(fill = "none", color = "none") + # don't show a legend
     xlab("No. of states") +
     #facet_wrap(~type, scales = "fixed", nrow = 2) +
     facet_grid(. ~ type, scales = "free", space='free') +
-    expand_limits(x = 6) +
+    expand_limits(x = 5.25) +
     scale_fill_viridis_d(option = "inferno", begin = 0.1, end = 0.9, alpha = 0.8, direction = -1) +
     scale_color_viridis_d(option = "inferno", begin = 0.1, end = 0.9, alpha = 1, direction = -1) +
     theme_light(base_size = 24)
 p +  geom_point(data = vrB4, aes(y = diff_BIC, x = as.factor(states), color = as.factor(states)),
                 position = position_jitter(width = .1), size = 1.5, alpha = 0.6, col = "#00BDFF") 
 dev.off()
+
+
 
 # plotting support by no. states with trendlines to show that the pattern is uniform accross trees
 pdf(file = "1c- Model support by states tree-wise trendlines_01_JUN.pdf", width = 7, height = 8.5)
@@ -386,11 +422,11 @@ names(sru) <- sru
 
 ## quick tally - which trees support MuHiSSE3 better than MuHiSSE2 and MuHiSSE4
 ## all supported models (BIC <6)
-trees <- data.frame(ordbytB[which(ordbytB$diff_BIC < 6),])
+trees <- ordbytB[which(ordbytB$diff_BIC < 6),]
 trees <- trees[-which(trees$tree == "MCC"),]
 trees$best <- paste0(trees$type, trees$states)
 
-## only best supported model per tree
+## only one best model per tree
 #   trees <- data.frame(sru)
 #   trees$best <- NA
 #   trees <- trees[-which(trees$sru == "MCC"),]
@@ -403,7 +439,7 @@ trees$best <- paste0(trees$type, trees$states)
 
 best <- table(trees$best)
 
-pdf(file="Figure 2- best configuration by BIC_04JUN.pdf", width = 7, height = 4)
+pdf(file="Figure 2- best configuration by BIC_04JUL.pdf", width = 7, height = 4)
 # Plot, and store x-coordinates of bars in xx
 xx <- barplot(best, xaxt = 'n', xlab = '', width = 0.85, ylim = c(0, max(best)+15),
               ylab = "No. of trees") #main = "Support for model configuration",
@@ -472,7 +508,7 @@ for (i in 1:nrow(div)) {
 
 ### 2.2.1 Calculate diversification rates (lambda) ----------------------------
 
-# take all BIC supported models (start from the previous step to repeat this process for AIC)
+# take all BIC supported models (start from the previous step to repeat this process with AIC)
 leading <- results[which(rownames(results) %in% rownames(ordbytB)[which(ordbytB$diff_BIC < 6)]),]
 #leading <- leading[order(leading$states),]
 # calculate trait-dependent netDiv values per state
@@ -493,21 +529,21 @@ for (state in 1:max(leading$states)) {
 
 
 ### 2.2.2 model weighting -----------------------------------------------------
-## I did not average separately competing models of the same tree variant because they 
-## indicate different number of parameters so not comparable. 
+## I did not average competing models of the same tree variant because they are 
+## mutually exclusive so not comparable. 
 
 # get all trees with equivocal results
 #equi <- leading[which(leading$tree %in% leading$tree[duplicated(leading$tree)]),]
 
 # weighing estimated values by model support for all tree variants (not for MCC)
 #mod_avg <- leading[which(leading$weight > 0.6),] # remove less-well supported trees
-mod_avg <- leading[which(leading$tree != "MCC"),]
-    
-for (i in 1:length(mod_avg$tree)) {
-    mod_avg[i,12:ncol(mod_avg)] <- mod_avg$weight[i] * mod_avg[i,12:ncol(mod_avg)]
-} 
+#mod_avg <- leading[which(leading$tree != "MCC"),]
+#    
+#for (i in 1:length(mod_avg$tree)) {
+#    mod_avg[i,12:ncol(mod_avg)] <- mod_avg$weight[i] * mod_avg[i,12:ncol(mod_avg)]
+#} 
 
-# ** the below averaging is likely wrong so commented out and was NOT used **
+# ** the below averaging is wrong and was NOT used but kept for generating ideas **
 #means <- colSums(mod_avg[which(mod_avg$tree != "MCC"),12:ncol(mod_avg)]) / 24 # mean rates
 #means <- c(rep(NA, 11), means)
 #mod_avg <- rbind(mod_avg, means)
@@ -579,9 +615,6 @@ evo <- evo[-remove,]
 rm(bi_state, tri_state, quad_state, mid_states, hi_states, vhi_states, remove)
 
 # plot rate estimates
-# This code loads the function in the working environment
-#source("https://gist.githubusercontent.com/benmarwick/2a1bb0133ff568cbe28d/raw/fb53bd97121f7f9ce947837ef1a4c65a73bffb3f/geom_flat_violin.R")
-
 setwd("C:/Users/Roi Maor/Desktop/2nd Chapter/DivRates/MuHiSSE/Output")
 
 # unaggregated rates
@@ -614,7 +647,9 @@ pdf(file="4b- Evol rates est_no_outlier_01JUN.pdf", width = 14, height = 8)
 # reorder to put speciation before extinction
 tb1$process <- factor(tb1$process, levels = c("s00","s01","s11","mu00","mu01","mu11","lambda00","lambda01","lambda11"))
 ggplot(tb1, aes(x = process, y = value)) +
-    geom_flat_violin(aes(fill = AP), position = position_nudge(x = .15, y = 0), alpha = .8) +
+    #geom_density_ridges(position = position_nudge(y = 0.14), scale = 0.7, 
+    #                    rel_min_height = 0.01, bandwidth = 7) +
+    geom_flat_violin(aes(fill = AP), position = position_nudge(x = .15, y = 0))+#, alpha = .8) +
     geom_point(aes(fill = AP), position = position_jitter(width = .05), shape = 21, size = 1.3, alpha = 0.3) + #
     geom_boxplot(aes(fill = AP), width = .15, outlier.shape = NA, alpha = 0.6) +
     theme_light() +
@@ -623,6 +658,7 @@ ggplot(tb1, aes(x = process, y = value)) +
     # the below line should be used for coloring boxplots by AP with the argument 'colour='
     #scale_colour_manual(values = c("green3","gold2","dodgerblue3"))+#,"blue")) +
     guides(fill = "none", color = "none") +
+    ylab("rate") +
     geom_rect(aes(xmin = 7 - 0.3, xmax = 9 + 0.55, ymin = 0 - 0.05, ymax = max(value, na.rm=TRUE) + 0.1),
               color = "#FF7799", fill = "transparent", size = 1.3) 
 dev.off()
@@ -672,41 +708,59 @@ for(i in 1:nrow(evol)){
 }
 #store in separate object
 delim <- which(colnames(evol) == "model")
-agg_rates <- evol[,delim:ncol(evol)]
+mean_rates <- evol[,delim:ncol(evol)]
 evol <- evol[,1:delim]
 
 # melt into long form
-agg <- pivot_longer(agg_rates, cols=2:ncol(agg_rates), names_to = "agg_rate", values_to = "value") %>%
+agg <- pivot_longer(mean_rates, cols=2:ncol(mean_rates), names_to = "mean_rate", values_to = "value") %>%
     drop_na()
-
 
 ## remove outliers and plot
 d <- numeric()
 for(i in 1:nrow(agg)){if(strsplit(agg$model[i], "_")[[1]][2] == "tree1803"){d <- c(d,i)}}
 agg_NOL <- agg[-d,]
+agg_NOL$type <- agg_NOL$AP <- NA
+agg_NOL$AP <- str_sub(agg_NOL$mean_rate, -1L, -1L)
+agg_NOL$AP <- gsub("N","Noct", agg_NOL$AP)
+agg_NOL$AP <- gsub("C","Cath", agg_NOL$AP)
+agg_NOL$AP <- gsub("D","Diur", agg_NOL$AP)
+agg_NOL$type <- str_sub(agg_NOL$mean_rate, 1L, -3L)
+agg_NOL$type <- gsub("div","Diversification", agg_NOL$type)
+agg_NOL$type <- gsub("ext","Extinction", agg_NOL$type)
+agg_NOL$type <- gsub("spec","Speciation", agg_NOL$type)
 
-agg_NOL$AP <- NA
-for(i in 1:nrow(agg_NOL)){
-    if(str_sub(agg_NOL$agg_rate[i], -1L, -1L) == "N"){agg_NOL$AP[i] <- "Noct"} 
-    if(str_sub(agg_NOL$agg_rate[i], -1L, -1L) == "C"){agg_NOL$AP[i] <- "Cath"}
-    if(str_sub(agg_NOL$agg_rate[i], -1L, -1L) == "D"){agg_NOL$AP[i] <- "Diur"}
+# calculate median values for plot labels
+agg_rate <- c("spec_N","spec_C","spec_D","ext_N","ext_C","ext_D","div_N","div_C","div_D")
+agg_medians <- as.data.frame(agg_rate)
+for(i in unique(agg_NOL$mean_rate)){
+    agg_medians$median[which(agg_medians$agg_rate == i)] <- median(agg_NOL$value[which(agg_NOL$mean_rate == i)])
 }
 
-pdf(file="4- Aggregated evol rates est_no_outlier_01JUN.pdf", width = 14, height = 8)
+
+pdf(file="Figure 3 - Aggregated evol rates est_no_outlier_19JUL.pdf", width = 14, height = 8)
 agg_NOL %>%
-    mutate(agg_rate = factor(agg_rate, levels=c("spec_N", "spec_C", "spec_D", "ext_N", "ext_C", "ext_D", "div_N", "div_C", "div_D"))) %>%
-    ggplot(aes(x = agg_rate, y = value)) +
+    mutate(mean_rate = factor(mean_rate, levels=c("spec_N", "spec_C", "spec_D", "ext_N", "ext_C", "ext_D", "div_N", "div_C", "div_D"))) %>%
+    ggplot(aes(x = mean_rate, y = value)) +
         geom_flat_violin(aes(fill = AP), position = position_nudge(x = .15, y = 0), alpha = .8) +
-        geom_point(aes(fill = AP), position = position_jitter(width = .05), shape = 21, size = 1.5, alpha = 0.4) + 
+        geom_point(aes(fill = AP), position = position_jitter(width = .03), shape = 21, size = 1.5, alpha = 0.4) + 
         geom_boxplot(aes(fill = AP), width = .15, outlier.shape = NA, alpha = 0.6) +
         theme_light(base_size = 24) +
         theme(axis.text.x = element_text(vjust = 1, hjust = 0.5)) + #angle = 80, 
-        scale_fill_manual(values = cols <- c("#33DD00","#FFCC00","#2233FF"))+#,"grey")) +
+        scale_fill_manual(values = cols <- c("#33DD00","#FFCC00","#2233FF")) +
         # the below line should be used for coloring boxplots by AP with the argument 'colour='
         scale_colour_manual(values = c("green3","gold2","dodgerblue3"))+#,"blue")) +
         guides(fill = "none", color = "none") +
-        geom_rect(aes(xmin = 7 - 0.3, xmax = 9 + 0.55, ymin = 0 - 0.05, ymax = max(value, na.rm=TRUE) + 0.1),
-                  color = "#FF7799", fill = "transparent", size = 1.3) 
+        #facet_wrap(~type) +
+        geom_label(label = round(agg_medians$median,3), data = agg_medians,
+                   x = -0.3+c(1:9), y = agg_medians$median,
+                   label.size = 0.07, label.padding = unit(0.2, "lines"), # Rectangle size around label
+                   color = "black", fill=c("#6677FF","#33DD00","#FFCC00","#6677FF","#33DD00",
+                                           "#FFCC00","#6677FF","#33DD00","#FFCC00"), alpha=0.6) +
+        # surrounding rectangle
+        #geom_rect(aes(xmin = 7 - 0.3, xmax = 9 + 0.55, ymin = 0 - 0.05, ymax = max(value, na.rm=TRUE) + 0.1),
+        #          color = "#FF7799", fill = "transparent", size = 0.8)
+        geom_rect(aes(xmin = 7 - 0.4, xmax = 9 + 0.55, ymin = -0.01, ymax = 0.01),
+                  fill = "#FF7799", size = 0.8)
 dev.off()
 
 
@@ -734,9 +788,13 @@ rel_rates$div_D <- rel_rates$ext_D <- rel_rates$spec_D <- as.numeric(rep("", nro
 # aggregate rate differences for each hidden state
 for(i in 1:nrow(rel_rates)){
     # find number of states in the model
-    nstate <- str_split(rownames(rel_rates)[i], "_")[[1]][1] %>%
-        str_sub(-1L,-1L) %>%
-        as.numeric()
+    nstate <- as.numeric(str_sub(rownames(rel_rates)[4], -14L,-14L))
+        
+    # alternative that was used in figures:
+        #str_split(rownames(rel_rates)[i], "_")[[1]][1] %>%
+        #str_sub(-1L,-1L) %>%
+        #as.numeric()
+    
     # exclude columns of states not in the model (use clone to notmodify original data frame)
     clone <- rel_rates[i,]
     dummies <- which(str_sub(colnames(clone), -1L, -1L) %in% LETTERS[(nstate+1):8])
@@ -774,33 +832,50 @@ relat <- rel_rates[,delim:ncol(rel_rates)]
 relat <- pivot_longer(relat, cols=2:ncol(relat), names_to = "relative_rate", values_to = "value") %>%
     drop_na()
 
-relat$AP <- NA
-for(i in 1:nrow(relat)){
-    if(str_sub(relat$relative_rate[i], -1L, -1L) == "N"){relat$AP[i] <- "Noct"} 
-    if(str_sub(relat$relative_rate[i], -1L, -1L) == "C"){relat$AP[i] <- "Cath"}
-    if(str_sub(relat$relative_rate[i], -1L, -1L) == "D"){relat$AP[i] <- "Diur"}
-}
+relat$type <- relat$AP <- NA
+relat$type <- str_sub(relat$relative_rate, 1L, -3L)
+relat$AP <- str_sub(relat$relative_rate, -1L, -1L)
+relat$AP <- gsub("N","Noct", relat$AP)
+relat$AP <- gsub("C","Cath", relat$AP)
+relat$AP <- gsub("D","Diur", relat$AP)
+
 
 ## remove outliers and plot
 d <- numeric()
 for(i in 1:nrow(relat)){if(strsplit(relat$model[i], "_")[[1]][2] == "tree1803"){d <- c(d,i)}}
 relat_NOL <- relat[-d,]
 
-pdf(file="5- Evol rates relative to NOCT_01JUN.pdf", width = 14, height = 8)
+# calculate median estimates for labels
+rel_rate <- c("spec_N","spec_C","spec_D","ext_N","ext_C","ext_D","div_N","div_C","div_D")
+rel_medians <- as.data.frame(rel_rate)
+for(i in unique(relat_NOL$relative_rate)){
+    rel_medians$median[which(rel_medians$rel_rate == i)] <- median(relat_NOL$value[which(relat_NOL$relative_rate == i)])
+}
+
+
+pdf(file="Figure 4 - Evol rates relative to NOCT_19JUL.pdf", width = 14, height = 8)
 relat_NOL %>%
     mutate(relative_rate = factor(relative_rate, levels=c("spec_N", "spec_C", "spec_D", "ext_N", 
                                                           "ext_C", "ext_D", "div_N", "div_C", "div_D"))) %>%
     ggplot(aes(x = relative_rate, y = value)) +
     geom_flat_violin(aes(fill = AP), position = position_nudge(x = .15, y = 0), alpha = .8) +
-    geom_point(aes(fill = AP), position = position_jitter(width = .05), shape = 21, 
+    geom_point(aes(fill = AP), position = position_jitter(width = .03), shape = 21, 
                size = 1.5, alpha = 0.4) + 
     geom_boxplot(aes(fill = AP), width = .15, outlier.shape = NA, alpha = 0.6) +
+    #facet_wrap(~type) +
+    geom_label(label = round(rel_medians$median,3), data = rel_medians,
+               x = c(1:9)-c(0.2,0.3,0.3,0.2,0.3,0.3,0.2,0.3,0.3), y = rel_medians$median,
+               label.size = 0.08, label.padding = unit(0.2, "lines"), # Rectangle size around label
+               color = "black", fill=c("#2233FF","#33DD00","#FFCC00","#2233FF","#33DD00",
+                                       "#FFCC00","#2233FF","#33DD00","#FFCC00"), alpha=0.4) +
     theme_light(base_size = 24) +
     theme(axis.text.x = element_text(vjust = 1, hjust = 0.5)) + #, angle = 80)) + # 
     scale_fill_manual(values = cols <- c("#33DD00","#FFCC00","#2233FF")) +
     guides(fill = "none", color = "none") +
-    geom_rect(aes(xmin = 7 - 0.3, xmax = 9 + 0.65, ymin = -0.1 - 0.05, ymax = max(value, na.rm=TRUE) + 0.05),
-              color = "#FF7799", fill = "transparent", size = 1.3)
+    geom_rect(aes(xmin = 7 - 0.4, xmax = 9 + 0.55, ymin = -0.2 - 0.007, ymax = -0.2 + 0.007),
+              fill = "#FF7799", size = 0.8)
+    #geom_rect(aes(xmin = 7 - 0.3, xmax = 9 + 0.65, ymin = -0.1 - 0.05, ymax = max(value, na.rm=TRUE) + 0.05),
+    #          color = "#FF7799", fill = "transparent", size = 1.3)
 dev.off()
 
 
@@ -817,11 +892,12 @@ Trates <- pivot_longer(tran, cols=1:ncol(tran)-1, names_to = "rate", values_to =
     drop_na()
 
 # removing transitions between states that do not exist in the model
+bi_state <- which(str_sub(Trates$model, start = -10L, end = -10L) == 2) # 2-state models
 tri_state <- which(str_sub(Trates$model, start = -10L, end = -10L) == 3) # 3-state models
-quad_state <- which(str_sub(Trates$model, start = -10L, end = -10L) == 4)# 4-state models
-hi_states <- which(!is.na(str_extract(Trates$rate, "[D-H]")))   # transitions outside states A-C
-vhi_states <- which(!is.na(str_extract(Trates$rate, "[E-H]")))  # transitions outside states A-D
-remove <- c(intersect(tri_state, hi_states), intersect(quad_state, vhi_states))
+hi_states <- which(!is.na(str_extract(Trates$rate, "C")))   # transitions to/from state C
+vhi_states <-  which(!is.na(str_extract(Trates$rate, "D")))   # transitions to/from state D
+nonexist <- which(!is.na(str_extract(Trates$rate, "[E-H]")))  # transitions outside states A-D
+remove <- c(intersect(bi_state, hi_states), intersect(tri_state, vhi_states), nonexist)
 Trates <- Trates[-remove,]
 
 # adding useful information
@@ -841,43 +917,119 @@ Trates <- cbind(Trates, modtype, rtype, rclass)
 Trates$rtype <- sapply(Trates$rtype, gsub, pattern = "00", replacement = "N")
 Trates$rtype <- sapply(Trates$rtype, gsub, pattern = "01", replacement = "C") 
 Trates$rtype <- sapply(Trates$rtype, gsub, pattern = "11", replacement = "D")
-rm(modtype, rtype, rclass, tri_state, quad_state, hi_states, vhi_states, remove)
+rm(modtype, rtype, rclass, bi_state, tri_state, hi_states, vhi_states, nonexist, remove)
 
 tbr1 <- Trates
 tbr2 <- tbr1[which(tbr1$rclass == "character change"),]        # exclude hidden rates
-tbr3 <- tbr2[which(tbr2$modtype == 3),]
-tbr4 <- tbr2[which(tbr2$modtype == 4),]
+tbr3 <- tbr2[which(tbr2$value < 50),]
+#tbr4 <- tbr2[which(tbr2$modtype == 4),]
 
 ## removing outlier tree - 
 #d <- numeric()
 #for(i in 1:nrow(Trates)){if(strsplit(Trates$model[i], "_")[[1]][2] == "tree1803"){d <- c(d,i)}}
 #tbr5 <- tbr2[-d,]
 
-tbr5 <- tbr2
-tbr5[which(tbr5$value < 10^-6),3] <- 10^-6 # 10^-6 < 1/(total tree depth * total number of lineages)
+
+## get average transition rates over all hidden states for each model
+# keep only character trasition rates
+CTR <- Trates[which(Trates$rclass == "character change"),]
+
+# make a table for output
+avtran <- as.data.frame(matrix(data=NA, nrow=524, ncol=4))
+colnames(avtran) <- colnames(CTR)[1:4]
+
+# iterate over models to calculate mean transition rates
+for(i in 1:131){
+    evmod <- unique(CTR$model)[i]
+    # find relevant rows for each transition type (using clone to not modify original data)
+    clone <- CTR[which(CTR$model == evmod),]
+    # isolate rates by transition type
+    NC <- which(!is.na(str_extract(clone$rate, ".00..01.")))
+    DC <- which(!is.na(str_extract(clone$rate, ".11..01.")))
+    CN <- which(!is.na(str_extract(clone$rate, ".01..00.")))
+    CD <- which(!is.na(str_extract(clone$rate, ".01..11.")))
+    
+    # make a summary table for each model
+    OP <- as.data.frame(matrix(data=NA, nrow=4, ncol=ncol(avtran)))
+    colnames(OP) <- colnames(CTR)[1:4]
+    OP[,c(1,4)] <- clone[1,c(1,4)]
+    OP[,2] <- c("N->C","C->N","C->D","D->C")
+    
+    # calculate mean of relevant rate estimates
+    OP[,3] <- c(mean(clone$value[NC]), mean(clone$value[CN]), 
+                mean(clone$value[CD]), mean(clone$value[DC]))
+    
+    # write in output table
+    avtran[(i*4-3):(i*4),] <- OP
+}
+
+
+# calculate median estimates for plot labels
+trn_rate <- c("N->C","C->N","C->D","D->C")
+trn_medians <- as.data.frame(trn_rate)
+for(i in unique(tbr2$rtype)){
+    trn_medians$median[which(trn_medians$trn_rate == i)] <- median(log(tbr2$value[which(tbr2$rtype == i)]))
+}
+
+# round to zero estimates that are below detectable limit
+#tbr5 <- tbr2
+#tbr5[which(tbr5$value < 10^-6),3] <- 10^-6 # 2*10^-6 < 1/(total tree depth * total number of lineages) == 1/(167.662*2400) == 2.48*10^-6
 # rates below this threshold are expected to be undetectable given current amount of data
 
 
 # plot transition rate estimates
 tbr2$rtype <- factor(tbr2$rtype, levels=c("N->C","C->N","C->D","D->C"))
-pdf(file="6- Transition rates estimates_01JUN.pdf", width = 10, height = 7)
-#pdf(file="Fig. 4 - Transition rates estimates_04JUN.pdf", width = 15, height = 11)
-ggplot(tbr2, aes(x = rtype, y = log(value+0.0000000001), fill = rtype)) + # added 10^-10 to the rate estimates to deal with zeros (72 rows)
+pdf(file="Figure 5 - Transition rates estimates_25JUL.pdf", width = 12, height = 8)
+ggplot(tbr2, aes(x = rtype, y = log(value+10^-10), fill = rtype)) + # added 10^-10 to the rate estimates to deal with zeros (72 rows)
     geom_flat_violin(position = position_nudge(x = .15, y = 0), alpha = .8) +
-    geom_point(colour = "grey20", position = position_jitter(width = .04), shape = 16, 
-               size = 1, alpha = 0.3) +
-    geom_boxplot(width = .15, outlier.shape = NA, alpha = 0.6) +
-    geom_hline(aes(yintercept = log(10^-6), colour = '#5A4A6F'), linetype = 2) + # this marks the effective rate of 0, because 10^-6 transitions per lineage per million years is 1 transition per 10000 lineages per 100 million years, which is unlikely to be detected when I examine <2500 lineages over 160 million years
-    theme_light(base_size = 20) +
+    geom_point(colour = "grey20", position = position_jitter(width = .02), shape = 16, 
+               size = 1.2, alpha = 0.4) +
+    geom_boxplot(width = .15, outlier.shape = NA, alpha = 0.7) +
+    geom_hline(aes(yintercept = log(2*10^-6), colour = '#5A4A6F'), linetype = 2) + # this marks the effective rate of 0, because 2*10^-6 transitions per lineage per million years is 1 transition per 5000 lineages per 100 million years, which is unlikely to be detected when I examine 2400 tips over 167.662myr (most lineages are MUCH younger than that)
+    theme_light(base_size = 26) +
     theme(axis.text.x = element_text(vjust = 1, hjust = 1)) +
-    annotate("rect", xmin = 0.45, xmax = 4.6, ymin = -24, ymax = log(10^-6)-0.1, alpha=0.6, fill="grey") +
+    annotate("rect", xmin = 0.45, xmax = 4.6, ymin = -24, ymax = log(2*10^-6), alpha=0.5, fill="grey") +
     scale_fill_manual(values = cols <- c("#AA22BB","#EE4444","gold1","#33AAFF")) +
     scale_colour_manual(values = c("#5A4A6F", "#E47250","#EBB261", "#9D5A6C","#5A4A6F","#E47250","#EBB261", "#9D5A6C")) +
-    labs(y = "log(transition rate)", x = "Direction of character transition (from -> to)") +
-    #annotate("text", x=2.5, y=-16, label= "undetectable\nrange", size = 4.5) + 
+    labs(y = expression(Transition~rate~~~ln(lineage^-1~Myr^-1)), 
+         x = "Direction of transition (from -> to)") +
+    geom_label(label = round(trn_medians$median,2), data = trn_medians,
+               x = c(1:4)-0.2, y = trn_medians$median,
+               label.size = 0.5, label.padding = unit(0.3, "lines"), label.r = unit(0.1, "lines"),
+               color = "black", fill = c("#AA22BB","#EE4444","gold1","#33AAFF"), alpha=0.3) +
     guides(fill = "none", color = "none") #+
     # Setting the limits of the y axis
     #scale_y_continuous(limits = c(0, .03)) 
+dev.off()
+
+
+## plot version with estimates averaged over hidden states
+# calculate median estimates for plot labels
+trn_rate <- c("N->C","C->N","C->D","D->C")
+trn_medians <- as.data.frame(trn_rate)
+for(i in unique(avtran$rate)){
+    trn_medians$median[which(trn_medians$trn_rate == i)] <- median(log(avtran$value[which(avtran$rate == i)]))
+}
+
+
+avtran$rate <- factor(avtran$rate, levels=c("N->C","C->N","C->D","D->C"))
+pdf(file="Figure 5 - Transition rates estimate means_25JUL.pdf", width = 12, height = 8)
+ggplot(avtran, aes(x = rate, y = log(value), fill = rate)) +
+    geom_flat_violin(position = position_nudge(x = .15, y = 0), alpha = .8) +
+    geom_point(colour = "grey20", position = position_jitter(width = .02), shape = 16, 
+               size = 1.2, alpha = 0.4) +
+    geom_boxplot(width = .15, outlier.shape = NA, alpha = 0.7) +
+    theme_light(base_size = 26) +
+    theme(axis.text.x = element_text(vjust = 1, hjust = 1)) +
+    scale_fill_manual(values = cols <- c("#AA22BB","#EE4444","gold1","#33AAFF")) +
+    #scale_colour_manual(values = c("#5A4A6F", "#E47250","#EBB261", "#9D5A6C","#5A4A6F","#E47250","#EBB261", "#9D5A6C")) +
+    labs(y = expression(Transition~rate~~~~ln(lineage^-1~Myr^-1)), 
+         x = "Direction of transition (from -> to)") +
+    geom_label(label = round(trn_medians$median,2), data = trn_medians,
+               x = c(1:4)-0.2, y = trn_medians$median,
+               label.size = 0.5, label.padding = unit(0.3, "lines"), label.r = unit(0.1, "lines"),
+               color = "black", fill = c("#AA22BB","#EE4444","gold1","#33AAFF"), alpha=0.3) +
+    guides(fill = "none", color = "none")
 dev.off()
 
 
@@ -990,7 +1142,7 @@ rm(modtype, rtype, rclass, tri_state, quad_state, hi_states, vhi_states, remove)
 
 trns1 <- Tr1[which(Tr1$rclass == "character change"),] 
 trns2 <- trns1
-trns2[which(trns2$value < 10^-6),3] <- 10^-6
+trns2[which(trns2$value < 2*10^-6),3] <- 2*10^-6
 
 trns1$rtype <- factor(trns1$rtype, levels=c("N->C","C->N","C->D","D->C"))
 ggplot(trns1, aes(x = rtype, y = log(value+0.0000000001), fill = rtype)) + # added 10^-10 to the rate estimates to deal with zeros (72 rows)
@@ -1000,7 +1152,7 @@ ggplot(trns1, aes(x = rtype, y = log(value+0.0000000001), fill = rtype)) + # add
     geom_hline(aes(yintercept = log(10^-6), colour = 'red'), linetype = 2) + # this marks the effective rate of 0, because 10^-6 transitions per lineage per million years is 1 transition per 10000 lineages per 100 million years, which is unlikely to be detected when I examine <2500 lineages over 160 million years
     theme_light() +
     theme(axis.text.x = element_text(vjust = 1, hjust = 1)) +
-    annotate("rect", xmin = 0.45, xmax = 4.6, ymin = -24, ymax = log(10^-6)-0.1, alpha=0.6, fill="grey") +
+    annotate("rect", xmin = 0.45, xmax = 4.6, ymin = -24, ymax = log(2*10^-6), alpha=0.6, fill="grey") +
     scale_fill_manual(values = cols <- c("#AA22BB","#EE4444","gold1","#44DDFF")) +
     scale_colour_manual(values = c("#5A4A6F", "#E47250",  "#EBB261", "#9D5A6C","#5A4A6F", "#E47250",  "#EBB261", "#9D5A6C")) +
     labs(y = "log(transition rate)", x = "Transition type (from -> to)") +
