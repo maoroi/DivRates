@@ -23,28 +23,28 @@ require(scales)
 ## use renv::restore() to reinstall all of the packages as declared in the lockfile.
 set.seed(88)
 
-# * 1 Functions to iron out phylogeny -----------------------------------
-# the Upham 2019 trees aren't precisely ultrametric, so I used this function from Liam Revell: 
+# 1 Functions to iron out phylogeny -----------------------------------
+# the Upham 2019 trees aren't precisely ultrametric, so I used phytools::force.ultrametric() 
+
 # http://blog.phytools.org/2017/03/forceultrametric-method-for-ultrametric.html
-force.ultrametric <- function(tree,method=c("nnls","extend")){
-    method<-method[1]
-    if(method=="nnls") tree <- nnls.tree(cophenetic(tree),tree, rooted=TRUE,trace=0)
-    else if(method=="extend"){
-        h<-diag(vcv(tree))
-        d<-max(h)-h
-        ii<-sapply(1:Ntip(tree),function(x,y) which(y==x),
-                   y=tree$edge[,2])
-        tree$edge.length[ii]<-tree$edge.length[ii]+d
-    } else 
-        cat("method not recognized: returning input tree\n\n")
-    tree
-}
+#force.ultrametric <- function(tree,method=c("nnls","extend")){
+#    method<-method[1]
+#    if(method=="nnls") tree <- nnls.tree(cophenetic(tree),tree, rooted=TRUE,trace=0)
+#    else if(method=="extend"){
+#        h<-diag(vcv(tree))
+#        d<-max(h)-h
+#        ii<-sapply(1:Ntip(tree),function(x,y) which(y==x),
+#                   y=tree$edge[,2])
+#        tree$edge.length[ii]<-tree$edge.length[ii]+d
+#    } else 
+#        cat("method not recognized: returning input tree\n\n")
+#    tree
+#}
 
 # loading activity data here to enable the following function
 read.csv("ActivityData_MDD_v1.csv") -> data   # file made in "1-Updating taxonomy.r"
 
-
-# automatically correct tip names to match taxonomy - requires the data file loaded (based on section 1.4 below)
+# correct tip names to match taxonomy - requires the data file loaded 
 CorTax <- function(tree){
     tree$tip.label[which(tree$tip.label == "Equus_africanus")]  <- "Equus_asinus"   # asinus is domestic E. africanus
     tree$tip.label[which(tree$tip.label == "Pygeretmus_zhitkovi")]  <- "Pygeretmus_shitkovi"    # correct spelling
@@ -69,14 +69,18 @@ CorTax <- function(tree){
     tree <- drop.tip(tree, which(!tree$tip.label %in% data$Phylo_name))
 }
 
-# * 2.1 Phylogenetic data (see also 1.4) ----------------------------------
+
+
+# 2. Reading in trees ---------------------------------------------------------
+
+## 2.1 Phylogenetic data ------------------------------------------------------
 phy1 <- read.tree("C:/Users/Roi Maor/Desktop/New Mam Phylo/Completed_5911sp_topoCons_NDexp/MamPhy_BDvr_Completed_5911sp_topoCons_NDexp_v2_tree0000.tre")
 tree <- ladderize(phy1)
 
 # plot tree for inspection if needed
-#pdf(file='tree.pdf', height=40, width=40)
-#plot(phy1, type='fan', cex=0.15, label.offset = 0.05)
-#dev.off()
+pdf(file='tree0000.pdf', height=40, width=40)
+plot(phy1, type='fan', cex=0.15, label.offset = 0.05)
+dev.off()
 
 ## random sample of trees out of 10k variants from Upham et al. 2019
 indices <- sprintf("%04d", sample(0:9999, 5000, replace=FALSE)) # sprintf makes all samples indices 4-digit long
@@ -96,7 +100,7 @@ is.ultrametric(MCCtree)
 UltMCCtree <- force.ultrametric(MCCtree)
 is.ultrametric(UltMCCtree)
 
-# * 2.2 Sample tree variants for analysis ---------------------------------
+## 2.2 Sample tree variants for analysis ---------------------------------
 ## variants sampled out of the indices that were used for the MCC tree, to ensure consistency
 
 vars <- sample(1:5000, 50, replace=FALSE)
@@ -107,7 +111,35 @@ for (j in 1:length(vars)){
     write.tree(treevar, file=paste0("C:/Users/Roi Maor/Desktop/2nd Chapter/DivRates/MuHiSSE/Data files/tree variants/treevar",indices[vars[j]],".nex"))
 }
 
-# * 3 Activity data  ------------------------------------------------------
+
+### all variants that were eventually used 
+#allvar <- c("0028","0612","0677","1030","1166","1774","1845","2966","3865","4496","5024",
+#            "5221","5333","5455","5684","5844","6259","6375","6404","6668","7198","7306",
+#     "8981","9128","0320","0369","0400","0647","0675","0772","0911","0917","1017","1233",
+#     "1322","1350","1564","1575","1666","1777","1803","1805","1816","1823","1904","2154",
+#     "2316","2417","2555","2953","2981","3019","3046","3120","3152","3168","3229","3349",
+#     "3490","3599","3734","3756","3766","3824","4012","4029","4224","4304","4387","4420",
+#     "4423","4439","4467","4568","4683","4831","4945","5039","5133","5242","5272","5338",
+#     "5340","5568","5594","5976","6255","6345","6747","6760","6774","6865","6914","6935",
+#     "6947","6972","7009","7051","7072","7074","7180","7444","7549","7627","7983","8004",
+#     "8156","8307","8377","8394","8429","8573","8705","8775","8974","9011","9023","9455",
+#     "9572","9743","9873","9923","9989","9997")
+
+# generate some descripte stats of tree sample
+treesum <- as.data.frame(matrix(data = NA, nrow = length(allvar), ncol=9))
+colnames(treesum) <- c("tree","Root age","Total BrLen","Mean BrLen","Min BrLen","BrLrn Q1","BrLrn Q2","BrLrn Q3","Max BrLen")
+for(i in 1:length(allvar)){
+    phyfile <- paste0("C:/Users/Roi Maor/Desktop/New Mam Phylo/Completed_5911sp_topoCons_NDexp/MamPhy_BDvr_Completed_5911sp_topoCons_NDexp_v2_tree",allvar[i],".tre")
+    tree <- read.tree(phyfile)
+    treesum$tree[i] <- allvar[i]
+    treesum$`Root age`[i] <- max(nodeHeights(tree))
+    treesum$`Total BrLen`[i] <- sum(tree$edge.length)
+    treesum$`Mean BrLen`[i] <- mean(tree$edge.length)
+    treesum[i,c(5:9)] <- quantile(tree$edge.length)[1:5]
+}
+write.csv(treesum, file="treesum.csv")
+
+# 3 Activity data  ------------------------------------------------------
 
 # making sure names in data and in tree match
 # checks below use the "%in%" syntax becasue setdiff() returns unique entries only, messing up the totals 
@@ -115,12 +147,12 @@ length(which(!data$MDD %in% tree$tip.label)) == 153     # checking names match -
 length(which(!data$MSW3 %in% tree$tip.label)) == 136    # somehow MSW3 has fewer mismatches
 
 
-# * 4 Matching names in the data to phylogeny ---------------------------
+# 4 Matching names in the data to phylogeny ---------------------------
 # new columns for the names that are actually in the phylogeny, and where they're taken from
 data$Phylo_name <- NA
 data$Phylo_name_conforms_to <- NA
 
-# * 4.1 Matching binomials in phylogeny to taxonomy ---------------------
+## 4.1 Matching binomials in phylogeny to taxonomy ---------------------
 # Species names were updated in the column 'Phylo_name'
 for (i in 1:nrow(data)){ 
     if (as.character(data$MDD[i]) %in% tree$tip.label){ # if the MDD form is in the tree, it was retained
@@ -136,7 +168,7 @@ for (i in 1:nrow(data)){
 }
 
 
-# * 4.2 Correcting mismatches manually ----------------------------------
+## 4.2 Correcting mismatches manually ----------------------------------
 # (it's the safest solution)
 
 # find the species for which both MSW3 and MDD are not in the tree
@@ -211,11 +243,11 @@ length(which(tree$tip.label %in% data$Phylo_name)) == 2424
 length(which(data$Phylo_name %in% tree$tip.label)) == 2424
 
 # write to file just in case (this wont help to skip the matching step, because some tip names have to be 
-# change in the phylogeny, which would be repeated for evert tree variant uploaded) 
+# change in the phylogeny, which would be repeated for every tree variant separately) 
 #write.csv(data, file="ActivityData_MDD_v1_match.csv", row.names = FALSE)
 
 
-# * 5 Final data processing steps ---------------------------------------
+# 5 Final data processing steps ---------------------------------------
 # read full data table (to save repeating the previous steps)
 data <- read.csv(file="ActivityData_MDD_v1_match.csv")
 act <- data[which(data$Phylo_name %in% tree$tip.label),]           
@@ -245,12 +277,12 @@ is.ultrametric(tree)
 #write.tree(tree, file='UltMCC.nex')
 
 
-# * 6 Transforming to binary data (optional) ----------------------------
+# 6 Transforming to binary data (optional) ----------------------------
 ### THIS COULD ALSO BE DONE BY SETTING PARAMETER IDENTITIES IN THE MODELS
-# * 6.1 Any daytime activity (N <-> CD dichotomy) ----------------------
+## 6.1 Any daytime activity (N <-> CD dichotomy) ----------------------
 
 
-# * 6.2 Only daytime activity (NC <-> D dichotomy ----------------------
+## 6.2 Only daytime activity (NC <-> D dichotomy ----------------------
 
 
 #dat$C <- rep.int(0, nrow(dat))
@@ -268,7 +300,7 @@ for (i in 1:nrow(dat)){
 
 
 
-# # 7 Plotting activity data on trees -------------------------------------
+# 7 Plotting activity data on trees -------------------------------------
 phy1 <- read.tree("UltMCC_2424spp_4AP_5kvars.nex")
 tree <- ladderize(phy1)
  
