@@ -167,7 +167,7 @@ library(ggridges)
 
 ## code for this figure adapted from: https://ourcodingclub.github.io/tutorials/dataviz-beautification-synthesis/#distributions 
 # This code loads the function in the working environment
-#source("https://gist.githubusercontent.com/benmarwick/2a1bb0133ff568cbe28d/raw/fb53bd97121f7f9ce947837ef1a4c65a73bffb3f/geom_flat_violin.R")
+source("https://gist.githubusercontent.com/benmarwick/2a1bb0133ff568cbe28d/raw/fb53bd97121f7f9ce947837ef1a4c65a73bffb3f/geom_flat_violin.R")
 # theme from: https://neuroconscience.wordpress.com/2018/03/15/introducing-raincloud-plots/
 #theme_niwot <- function(){
 #    theme_bw() +
@@ -490,7 +490,7 @@ for (i in colnames(params)) {                       # iterate over each rate col
 #write.csv(div, file="Raw Rates of Evolution_125trees.csv", row.names = TRUE)
 
 
-## 2.2 Parameter estimates from averaging supported models --------------------
+## 2.2 Parameter estimates from supported models ------------------------------
 
 # combine fit and params estimates to one table
 results <- ordbytB
@@ -737,7 +737,7 @@ for(i in unique(agg_NOL$mean_rate)){
 }
 
 
-pdf(file="Figure 3 - Aggregated evol rates est_no_outlier_19JUL.pdf", width = 14, height = 8)
+pdf(file="Figure 3 - Aggregated evol rates est_no_outlier_7OCT.pdf", width = 14, height = 8)
 agg_NOL %>%
     mutate(mean_rate = factor(mean_rate, levels=c("spec_N", "spec_C", "spec_D", "ext_N", "ext_C", "ext_D", "div_N", "div_C", "div_D"))) %>%
     ggplot(aes(x = mean_rate, y = value)) +
@@ -755,12 +755,13 @@ agg_NOL %>%
                    x = -0.3+c(1:9), y = agg_medians$median,
                    label.size = 0.07, label.padding = unit(0.2, "lines"), # Rectangle size around label
                    color = "black", fill=c("#6677FF","#33DD00","#FFCC00","#6677FF","#33DD00",
-                                           "#FFCC00","#6677FF","#33DD00","#FFCC00"), alpha=0.6) +
+                                           "#FFCC00","#6677FF","#33DD00","#FFCC00"), alpha=0.6) #+
         # surrounding rectangle
         #geom_rect(aes(xmin = 7 - 0.3, xmax = 9 + 0.55, ymin = 0 - 0.05, ymax = max(value, na.rm=TRUE) + 0.1),
         #          color = "#FF7799", fill = "transparent", size = 0.8)
-        geom_rect(aes(xmin = 7 - 0.4, xmax = 9 + 0.55, ymin = -0.01, ymax = 0.01),
-                  fill = "#FF7799", size = 0.8)
+        # pink underline (rectangle)    
+        #geom_rect(aes(xmin = 7 - 0.4, xmax = 9 + 0.55, ymin = -0.01, ymax = 0.01),
+        #          fill = "#FF7799", size = 0.8)
 dev.off()
 
 
@@ -853,7 +854,7 @@ for(i in unique(relat_NOL$relative_rate)){
 }
 
 
-pdf(file="Figure 4 - Evol rates relative to NOCT_19JUL.pdf", width = 14, height = 8)
+pdf(file="Figure 4 - Evol rates relative to NOCT_7OCT.pdf", width = 14, height = 8)
 relat_NOL %>%
     mutate(relative_rate = factor(relative_rate, levels=c("spec_N", "spec_C", "spec_D", "ext_N", 
                                                           "ext_C", "ext_D", "div_N", "div_C", "div_D"))) %>%
@@ -872,8 +873,9 @@ relat_NOL %>%
     theme(axis.text.x = element_text(vjust = 1, hjust = 0.5)) + #, angle = 80)) + # 
     scale_fill_manual(values = cols <- c("#33DD00","#FFCC00","#2233FF")) +
     guides(fill = "none", color = "none") +
-    geom_rect(aes(xmin = 7 - 0.4, xmax = 9 + 0.55, ymin = -0.2 - 0.007, ymax = -0.2 + 0.007),
-              fill = "#FF7799", size = 0.8)
+    geom_hline(yintercept = 0, colour = alpha("#2233FF", 0.4), size = 3)
+    #geom_rect(aes(xmin = 7 - 0.4, xmax = 9 + 0.55, ymin = -0.2 - 0.007, ymax = -0.2 + 0.007),
+    #          fill = "#FF7799", size = 0.8)
     #geom_rect(aes(xmin = 7 - 0.3, xmax = 9 + 0.65, ymin = -0.1 - 0.05, ymax = max(value, na.rm=TRUE) + 0.05),
     #          color = "#FF7799", fill = "transparent", size = 1.3)
 dev.off()
@@ -897,7 +899,9 @@ tri_state <- which(str_sub(Trates$model, start = -10L, end = -10L) == 3) # 3-sta
 hi_states <- which(!is.na(str_extract(Trates$rate, "C")))   # transitions to/from state C
 vhi_states <-  which(!is.na(str_extract(Trates$rate, "D")))   # transitions to/from state D
 nonexist <- which(!is.na(str_extract(Trates$rate, "[E-H]")))  # transitions outside states A-D
-remove <- c(intersect(bi_state, hi_states), intersect(tri_state, vhi_states), nonexist)
+remove <- c(intersect(bi_state, union(hi_states, vhi_states)), 
+            intersect(tri_state, vhi_states), 
+            nonexist)
 Trates <- Trates[-remove,]
 
 # adding useful information
@@ -917,7 +921,11 @@ Trates <- cbind(Trates, modtype, rtype, rclass)
 Trates$rtype <- sapply(Trates$rtype, gsub, pattern = "00", replacement = "N")
 Trates$rtype <- sapply(Trates$rtype, gsub, pattern = "01", replacement = "C") 
 Trates$rtype <- sapply(Trates$rtype, gsub, pattern = "11", replacement = "D")
+
 rm(modtype, rtype, rclass, bi_state, tri_state, hi_states, vhi_states, nonexist, remove)
+
+
+#### 2.3.2.1 Plot raw character transition rates ------------------------------
 
 tbr1 <- Trates
 tbr2 <- tbr1[which(tbr1$rclass == "character change"),]        # exclude hidden rates
@@ -929,46 +937,11 @@ tbr3 <- tbr2[which(tbr2$value < 50),]
 #for(i in 1:nrow(Trates)){if(strsplit(Trates$model[i], "_")[[1]][2] == "tree1803"){d <- c(d,i)}}
 #tbr5 <- tbr2[-d,]
 
-
-## get average transition rates over all hidden states for each model
-# keep only character trasition rates
-CTR <- Trates[which(Trates$rclass == "character change"),]
-
-# make a table for output
-avtran <- as.data.frame(matrix(data=NA, nrow=524, ncol=4))
-colnames(avtran) <- colnames(CTR)[1:4]
-
-# iterate over models to calculate mean transition rates
-for(i in 1:131){
-    evmod <- unique(CTR$model)[i]
-    # find relevant rows for each transition type (using clone to not modify original data)
-    clone <- CTR[which(CTR$model == evmod),]
-    # isolate rates by transition type
-    NC <- which(!is.na(str_extract(clone$rate, ".00..01.")))
-    DC <- which(!is.na(str_extract(clone$rate, ".11..01.")))
-    CN <- which(!is.na(str_extract(clone$rate, ".01..00.")))
-    CD <- which(!is.na(str_extract(clone$rate, ".01..11.")))
-    
-    # make a summary table for each model
-    OP <- as.data.frame(matrix(data=NA, nrow=4, ncol=ncol(avtran)))
-    colnames(OP) <- colnames(CTR)[1:4]
-    OP[,c(1,4)] <- clone[1,c(1,4)]
-    OP[,2] <- c("N->C","C->N","C->D","D->C")
-    
-    # calculate mean of relevant rate estimates
-    OP[,3] <- c(mean(clone$value[NC]), mean(clone$value[CN]), 
-                mean(clone$value[CD]), mean(clone$value[DC]))
-    
-    # write in output table
-    avtran[(i*4-3):(i*4),] <- OP
-}
-
-
 # calculate median estimates for plot labels
 trn_rate <- c("N->C","C->N","C->D","D->C")
 trn_medians <- as.data.frame(trn_rate)
 for(i in unique(tbr2$rtype)){
-    trn_medians$median[which(trn_medians$trn_rate == i)] <- median(log(tbr2$value[which(tbr2$rtype == i)]))
+    trn_medians$median_raw[which(trn_medians$trn_rate == i)] <- median(log(tbr2$value[which(tbr2$rtype == i)]))
 }
 
 # round to zero estimates that are below detectable limit
@@ -989,51 +962,137 @@ ggplot(tbr2, aes(x = rtype, y = log(value+10^-10), fill = rtype)) + # added 10^-
     theme_light(base_size = 26) +
     theme(axis.text.x = element_text(vjust = 1, hjust = 1)) +
     annotate("rect", xmin = 0.45, xmax = 4.6, ymin = -24, ymax = log(2*10^-6), alpha=0.5, fill="grey") +
-    scale_fill_manual(values = cols <- c("#AA22BB","#EE4444","gold1","#33AAFF")) +
-    scale_colour_manual(values = c("#5A4A6F", "#E47250","#EBB261", "#9D5A6C","#5A4A6F","#E47250","#EBB261", "#9D5A6C")) +
+    scale_fill_manual(values = cols <- c("#AA22BB","gold1","#EE4444","#33AAFF")) +
+    #scale_colour_manual(values = c("#5A4A6F", "#E47250","#EBB261", "#9D5A6C","#5A4A6F","#E47250","#EBB261", "#9D5A6C")) +
     labs(y = expression(Transition~rate~~~ln(lineage^-1~Myr^-1)), 
          x = "Direction of transition (from -> to)") +
-    geom_label(label = round(trn_medians$median,2), data = trn_medians,
-               x = c(1:4)-0.2, y = trn_medians$median,
+    geom_label(label = round(trn_medians$median_raw,2), data = trn_medians,
+               x = c(1:4)-0.2, y = trn_medians$median_raw,
                label.size = 0.5, label.padding = unit(0.3, "lines"), label.r = unit(0.1, "lines"),
                color = "black", fill = c("#AA22BB","#EE4444","gold1","#33AAFF"), alpha=0.3) +
     guides(fill = "none", color = "none") #+
-    # Setting the limits of the y axis
-    #scale_y_continuous(limits = c(0, .03)) 
+# Setting the limits of the y axis
+#scale_y_continuous(limits = c(0, .03)) 
 dev.off()
 
+
+#### 2.3.2.2 Plot aggregated character transition rates -----------------------
+
+## get average transition rates over all hidden states for each model
+# keep only character trasition rates
+CTR <- Trates[which(Trates$rclass == "character change"),]
+
+# check that geometric mean can be calculated (must have positive values only)
+any(CTR$value <= 0)
+# FALSE
+
+# make a table for output
+avtran <- as.data.frame(matrix(data=NA, nrow=524, ncol=4))
+colnames(avtran) <- colnames(CTR)[1:4]
+
+# iterate over models to calculate mean transition rates
+for(i in 1:131){
+    evmod <- unique(CTR$model)[i]
+    # find relevant rows for each transition type (using clone to not modify original data)
+    clone <- CTR[which(CTR$model == evmod),]
+    # isolate rates by transition type
+    NC <- which(!is.na(str_extract(clone$rate, ".00..01.")))
+    DC <- which(!is.na(str_extract(clone$rate, ".11..01.")))
+    CN <- which(!is.na(str_extract(clone$rate, ".01..00.")))
+    CD <- which(!is.na(str_extract(clone$rate, ".01..11.")))
+    
+    # make a summary table for current model
+    OP <- as.data.frame(matrix(data=NA, nrow=4, ncol=ncol(avtran)))
+    colnames(OP) <- colnames(CTR)[1:4]
+    OP[,c(1,4)] <- clone[1,c(1,4)]
+    OP[,2] <- c("N->C","C->N","C->D","D->C")
+    
+    # calculate mean of relevant rate estimates
+    #OP[,3] <- c(mean(clone$value[NC]), mean(clone$value[CN]), 
+    #            mean(clone$value[CD]), mean(clone$value[DC]))
+    # calculate geometric mean of relevant rate estimates
+    if(any(clone$value <= 0)){ # geom mean only works for positive values
+        OP[,3] <- NA
+    } else {
+        n_states <- as.numeric(unique(str_sub(clone$modtype, start=-1L, end=-1L)))
+        OP[,3] <- c(prod(clone$value[NC])^(1/n_states), prod(clone$value[CN])^(1/n_states),
+                    prod(clone$value[CD])^(1/n_states), prod(clone$value[DC])^(1/n_states))
+    }
+    # write in output table
+    avtran[(i*4-3):(i*4),] <- OP
+}
 
 ## plot version with estimates averaged over hidden states
 # calculate median estimates for plot labels
 trn_rate <- c("N->C","C->N","C->D","D->C")
 trn_medians <- as.data.frame(trn_rate)
 for(i in unique(avtran$rate)){
-    trn_medians$median[which(trn_medians$trn_rate == i)] <- median(log(avtran$value[which(avtran$rate == i)]))
+    trn_medians$median_agg[which(trn_medians$trn_rate == i)] <- median(log(avtran$value[which(avtran$rate == i)]))
 }
 
-
 avtran$rate <- factor(avtran$rate, levels=c("N->C","C->N","C->D","D->C"))
-pdf(file="Figure 5 - Transition rates estimate means_25JUL.pdf", width = 12, height = 8)
-ggplot(avtran, aes(x = rate, y = log(value), fill = rate)) +
-    geom_flat_violin(position = position_nudge(x = .15, y = 0), alpha = .8) +
+pdf(file="Figure 5 - Transition rates estimate geom_means-not-transformed_7OCT.pdf", width = 12, height = 8)
+ggplot(avtran, aes(x = rate, y = value, fill = rate)) +
+    geom_flat_violin(position = position_nudge(x = .1, y = 0), alpha = .8) +
     geom_point(colour = "grey20", position = position_jitter(width = .02), shape = 16, 
                size = 1.2, alpha = 0.4) +
     geom_boxplot(width = .15, outlier.shape = NA, alpha = 0.7) +
     theme_light(base_size = 26) +
     theme(axis.text.x = element_text(vjust = 1, hjust = 1)) +
     scale_fill_manual(values = cols <- c("#AA22BB","#EE4444","gold1","#33AAFF")) +
-    #scale_colour_manual(values = c("#5A4A6F", "#E47250","#EBB261", "#9D5A6C","#5A4A6F","#E47250","#EBB261", "#9D5A6C")) +
     labs(y = expression(Transition~rate~~~~ln(lineage^-1~Myr^-1)), 
          x = "Direction of transition (from -> to)") +
-    geom_label(label = round(trn_medians$median,2), data = trn_medians,
-               x = c(1:4)-0.2, y = trn_medians$median,
+    geom_label(label = round(trn_medians$median_agg,2), data = trn_medians,
+               x = c(1:4)-0.2, y = trn_medians$median_agg,
                label.size = 0.5, label.padding = unit(0.3, "lines"), label.r = unit(0.1, "lines"),
                color = "black", fill = c("#AA22BB","#EE4444","gold1","#33AAFF"), alpha=0.3) +
     guides(fill = "none", color = "none")
 dev.off()
 
 
-## 2.4 Omitting 50 worst performing trees -------------------------------------
+## 2.4 Extracting mean parameter values per tree ------------------------------
+# transition rates averaged over all hidden states for each tree 
+trees <- str_sub(CTR$model, -4L, -1L)
+# array to store all results matrices
+a <- array(data=NA, dim=c(3, 3, 124), dimnames=list(c("N","C","D"), c("N","C","D"), unique(trees)))
+for(tr in unique(trees)){ 
+    # rates for current tree only
+    rates <- CTR[which(trees == tr),]
+    # make transition matrix to populate with estimates
+    ratmat <- matrix(c(0, 1, 0, 2, 0, 3, 0, 4, 0), 3)
+    colnames(ratmat) <- rownames(ratmat) <- c("N","C","D")
+    # fill in estimates
+    ratmat[4] <- mean(rates$value[c(1,5,9)])
+    ratmat[2] <- mean(rates$value[c(1,5,9)+1])
+    ratmat[8] <- mean(rates$value[c(1,5,9)+2])
+    ratmat[6] <- mean(rates$value[c(1,5,9)+3])
+    a[,,tr]<- ratmat
+}
+
+# find matrices with fast transitions
+for(tr in unique(trees)){if(any(a[,,tr] > 10)){print(tr)}}
+# manually inserted the results from the loop above into an object
+fast_rates <- a[,,c("0400","0612","0675","0677","0911","1030","1166","1233","1564","1666",
+                    "1803","1845","2316","2555","3152","3168","3229","3349","3756","3824",
+                    "4224","4439","4496","4568","5242","5338","5594","5976","6747","7009",
+                    "7051","7306","7549","8156","8377","8429","8974","9128","9743","9997")]
+
+# find matrices with reasonable transitions
+for(tr in unique(trees)){if(sum(a[,,tr]) < 20){print(tr)}}
+
+
+reas_rates <- a[,,c("0028","0320","0369","0647","0772","0917","1017","1322","1350","1575",
+                    "1774","1777","1805","1816","1823","1904","2154","2417","2555","2953",
+                    "2966","2981","3019","3046","3120","3490","3599","3734","3766","3865",
+                    "4012","4029","4224","4304","4387","4420","4423","4467","4683","4831",
+                    "4945","5024","5039","5133","5221","5272","5333","5340","5455","5568",
+                    "5684","5844","6255","6259","6345","6375","6404","6668","6760","6774",
+                    "6865","6914","6935","6947","6972","7072","7074","7180","7198","7444",
+                    "7627","7983","8004","8156","8307","8394","8573","8705","8775","8981",
+                    "9011","9023","9455","9572","9873","9923","9989")]
+
+
+## 2.x Omitting 50 worst performing trees -------------------------------------
 # TL;DR - omitting 50 worst performing trees doesn't visibly change the results 
 
 # order trees by best performing model (BIC)
@@ -1044,7 +1103,7 @@ slct <- srtmod[1:78,] # this eliminates the 50 worst performing trees (some have
 srtmod[which(srtmod$tree %in% c("3120","6760","6375","4420","2555","2417","3865")),c(1:11)]
 slct[which(slct$tree %in% c("3120","6760","6375","4420")), c(1:11)]
 
-### 2.4.1 Evolutionary rates --------------------------------------------------
+### 2.x.1 Evolutionary rates --------------------------------------------------
 evol1 <- slct[,-c(1:11)]
 evol1 <- evol1[which(is.na(str_extract(colnames(evol1), "q")))] # all rates that are NOT transition rates
 evol1$model <- str_replace(rownames(evol1), ".RDS", "") # remove file suffix from model names
@@ -1101,7 +1160,7 @@ ggplot(evo_1, aes(x = rtype, y = value)) +
               color = "red", fill = "transparent", size = 1.2) 
 
 
-### 2.4.2 Transition rates ----------------------------------------------------
+### 2.x.2 Transition rates ----------------------------------------------------
 tran1 <- slct[,-c(1:11)]
 tran1 <- tran1[which(!is.na(str_extract(colnames(tran1), "q")))] # transition rates only
 tran1$model <- str_replace(rownames(tran1), ".RDS", "") # remove file suffix from model names
