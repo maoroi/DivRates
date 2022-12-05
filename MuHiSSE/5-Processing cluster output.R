@@ -214,7 +214,7 @@ varsB <- ordbytB[which(ordbytB$tree != "MCC"),]
 vrA <- varsA[which(varsA$type %in% c("vrCID", "vrMuHiSSE")),]
 vrB <- varsB[which(varsB$type %in% c("vrCID", "vrMuHiSSE")),]
 
-# the zero values mess with the distribution curve so I plot them afterwards
+# the zero values mess with the distribution curve in geom_flat_violin() so I plot them afterwards
 vrB2 <- filter(varsB, diff_BIC != 0)
 vrB4 <- filter(varsB, diff_BIC == 0)
 
@@ -268,19 +268,22 @@ ggplot(data = vrA, aes(y = diff_AICc, x = as.factor(states), fill = as.factor(st
 dev.off()
 
 ## alternative plotting function because geom_flat_violin() was having issues in the panel of best supported models
-pdf(file = "2- Relative model support by BIC_light_30JUN.pdf", width = 24, height = 8)
+png(file = "1- Relative model support by BIC_line_3DEC.png", width = 12, height = 8, res=600, unit="in")
+#pdf(file = "1- Relative model support by BIC_light_3DEC.pdf", width = 12, height = 10)
+#colnames(varsB)[which(colnames(varsB) == "diff_BIC")] <- "delta_BIC"
 ggplot(varsB, aes(x = diff_BIC, y = as.factor(states), fill = as.factor(states))) +
     geom_density_ridges(position = position_nudge(y = 0.14), scale = 0.7, 
                         rel_min_height = 0.01, bandwidth = 7) +
-    geom_point(aes(), position = position_jitter(height = .05), size = .85, alpha = 0.4, shape = 16) +
+    geom_point(aes(), position = position_jitter(height = .025), size = .8, alpha = 0.6, shape = 16) +
     geom_boxplot(width = .15, outlier.shape = NA, alpha = 0.7) +
     guides(fill = "none", color = "none") + # don't show a legend
     scale_fill_viridis_d(option = "inferno", begin = 0.1, end = 0.9, alpha = 0.8, direction = -1) +
     scale_color_viridis_d(option = "inferno", begin = 0.1, end = 0.9, alpha = 1, direction = -1) +
-    facet_wrap(~type, nrow = 1) + 
+    facet_wrap(~factor(type, levels = c("CID", "vrCID", "MuHiSSE", "vrMuHiSSE")), nrow = 1) + # reorder panels
     ylab("No. of states") +
+    xlab("\u0394 BIC") +
     coord_flip() +
-    theme_light(base_size = 28)
+    theme_light(base_size = 24)
 dev.off()
 
 # No. of estimated parameters instead of No. of states
@@ -438,7 +441,7 @@ trees$best <- paste0(trees$type, trees$states)
 #   }
 
 best <- table(trees$best)
-
+## plot bar chart for model support
 pdf(file="Figure 2- best configuration by BIC_04JUL.pdf", width = 7, height = 4)
 # Plot, and store x-coordinates of bars in xx
 xx <- barplot(best, xaxt = 'n', xlab = '', width = 0.85, ylim = c(0, max(best)+15),
@@ -487,7 +490,7 @@ for (i in colnames(params)) {                       # iterate over each rate col
     }
 }
 #setwd("C:/Users/Roi Maor/Desktop/2nd Chapter/DivRates/MuHiSSE/Output")
-#write.csv(div, file="Raw Rates of Evolution_125trees.csv", row.names = TRUE)
+#write.csv(div, file="Raw Rates of Evolution_124trees_10OCT22.csv", row.names = TRUE)
 
 
 ## 2.2 Parameter estimates from supported models ------------------------------
@@ -590,7 +593,8 @@ type[which(!is.na(str_extract(evo$rate, "lambda")))] <- "net.div"
 
 for (i in 1:nrow(evo)){
     modtype[i] <- str_extract(str_split(evo$model[i], "_")[[1]][1], "[0-9]")
-    process[i] <- str_sub(evo$rate[i], start = 1L, end = -2L)}
+    process[i] <- str_sub(evo$rate[i], start = 1L, end = -2L)
+}
 
 AP[which(str_sub(evo$rate, start = -3L, end = -2L) == "00")] <- "Noct"
 AP[which(str_sub(evo$rate, start = -3L, end = -2L) == "01")] <- "Cath"
@@ -607,10 +611,12 @@ rm(type, modtype, process, AP, state)
 bi_state <- which(str_sub(evo$model, start = -10L, end = -10L) == 2)    # 2-state models
 tri_state <- which(str_sub(evo$model, start = -10L, end = -10L) == 3)   # 3-state models
 quad_state <- which(str_sub(evo$model, start = -10L, end = -10L) == 4)  # 4-state models
-mid_states <- which(evo$state %in% LETTERS[3:8])        # transitions outside states A-B
-hi_states <- which(evo$state %in% LETTERS[4:8])         # transitions outside states A-C
-vhi_states <- which(evo$state %in% LETTERS[5:8])        # transitions outside states A-D
-remove <- c(intersect(bi_state, mid_states), intersect(tri_state, hi_states), intersect(quad_state, vhi_states))
+mid_states <- which(!evo$state %in% LETTERS[3:8])        # transitions outside states A-B
+hi_states <- which(!evo$state %in% LETTERS[4:8])         # transitions outside states A-C
+vhi_states <- which(!evo$state %in% LETTERS[5:8])        # transitions outside states A-D
+remove <- c(intersect(bi_state, mid_states), 
+            intersect(tri_state, hi_states), 
+            intersect(quad_state, vhi_states))
 evo <- evo[-remove,]
 rm(bi_state, tri_state, quad_state, mid_states, hi_states, vhi_states, remove)
 
@@ -735,27 +741,43 @@ agg_medians <- as.data.frame(agg_rate)
 for(i in unique(agg_NOL$mean_rate)){
     agg_medians$median[which(agg_medians$agg_rate == i)] <- median(agg_NOL$value[which(agg_NOL$mean_rate == i)])
 }
+agg_medians$AP <- c("Noct","Cath","Diur","Noct","Cath","Diur","Noct","Cath","Diur")
+agg_medians$type <- c("Speciation","Speciation","Speciation", 
+                      "Extinction","Extinction","Extinction",
+                      "Diversification","Diversification","Diversification")
 
 
-pdf(file="Figure 3 - Aggregated evol rates est_no_outlier_7OCT.pdf", width = 14, height = 8)
+## change labels to denot AP by 4 letters instead of 1
+for(i in 1:nrow(agg_NOL)){
+    agg_NOL$mean_rate[i] <- paste0(strsplit(agg_NOL$mean_rate[i],"_")[[1]][1],"_", agg_NOL$AP[i])
+}
+
+
+pdf(file="Figure 33 - Aggregated evol rates est_no_outlier_3DEC.pdf", width = 14, height = 8)
+png(file="Figure 3 - Aggregated evol rates est_no_outlier_3DEC.png", width=12, height=7, res=600, unit="in")
 agg_NOL %>%
-    mutate(mean_rate = factor(mean_rate, levels=c("spec_N", "spec_C", "spec_D", "ext_N", "ext_C", "ext_D", "div_N", "div_C", "div_D"))) %>%
-    ggplot(aes(x = mean_rate, y = value)) +
+    #mutate(mean_rate = factor(mean_rate, levels=c("spec_Noct", "spec_Cath", "spec_Diur", 
+    #                                              "ext_Noct", "ext_Cath", "ext_Diur", 
+    #                                              "div_Noct", "div_Cath", "div_Diur"))) %>%
+    mutate(type = factor(type, levels = c("Speciation", "Extinction","Diversification"))) %>%
+    ggplot(aes(x = factor(AP, levels = c("Noct","Cath","Diur")), y = value)) +
         geom_flat_violin(aes(fill = AP), position = position_nudge(x = .15, y = 0), alpha = .8) +
         geom_point(aes(fill = AP), position = position_jitter(width = .03), shape = 21, size = 1.5, alpha = 0.4) + 
         geom_boxplot(aes(fill = AP), width = .15, outlier.shape = NA, alpha = 0.6) +
         theme_light(base_size = 24) +
         theme(axis.text.x = element_text(vjust = 1, hjust = 0.5)) + #angle = 80, 
         scale_fill_manual(values = cols <- c("#33DD00","#FFCC00","#2233FF")) +
-        # the below line should be used for coloring boxplots by AP with the argument 'colour='
         scale_colour_manual(values = c("green3","gold2","dodgerblue3"))+#,"blue")) +
-        guides(fill = "none", color = "none") +
-        #facet_wrap(~type) +
-        geom_label(label = round(agg_medians$median,3), data = agg_medians,
-                   x = -0.3+c(1:9), y = agg_medians$median,
-                   label.size = 0.07, label.padding = unit(0.2, "lines"), # Rectangle size around label
+        geom_label(data = agg_medians, aes(x = AP, y = median, label = round(median,3)),
+                   nudge_x = -0.31, label.size = 0.07, label.padding = unit(0.2, "lines"), # Rectangle size around label
                    color = "black", fill=c("#6677FF","#33DD00","#FFCC00","#6677FF","#33DD00",
-                                           "#FFCC00","#6677FF","#33DD00","#FFCC00"), alpha=0.6) #+
+                                           "#FFCC00","#6677FF","#33DD00","#FFCC00"), alpha=0.6) +
+        guides(fill = "none", color = "none") +
+        ylab("mean rate") +
+        xlab(NULL) +
+        #scale_x_discrete(guide = guide_axis(n.dodge = 2)) +
+        facet_wrap(~factor(type, levels = c("Speciation","Extinction","Diversification")), nrow = 1)
+        
         # surrounding rectangle
         #geom_rect(aes(xmin = 7 - 0.3, xmax = 9 + 0.55, ymin = 0 - 0.05, ymax = max(value, na.rm=TRUE) + 0.1),
         #          color = "#FF7799", fill = "transparent", size = 0.8)
@@ -765,7 +787,67 @@ agg_NOL %>%
 dev.off()
 
 
-#### 2.3.1.3 Within-state relative rates --------------------------------------
+#### 2.3.1.3 Within-model relative rates --------------------------------------
+
+## in each model, show the differential between nocturnal rates and diurnal or cathemeral
+
+###  This subsection is a lot easier and simpler than the following, and possibly
+###  easier to defend because it doesn't calculate directly from questionable 
+###  hidden rates into account. The overall results of the two calculations are 
+###  almost identical anyway.
+
+agg_NOL$tree <- NA
+for(i in 1:nrow(agg_NOL)){
+    agg_NOL$tree[i] <- strsplit(agg_NOL$model[i],"_tree")[[1]][2]
+}
+
+# group relevant rates together (for visual inspection)
+by_mod <- agg_NOL %>% arrange(tree, type, .by_group = TRUE)
+
+## calculate rate differences
+by_mod$subtr <- NA
+for(z in 1:nrow(by_mod)/3){ # iterate over every group of evol rates (3 AP in each set)
+    # in each set of 3 columns the first one is the nocturnal baseline
+    by_mod$subtr[3*(z-1)+1] <- 0 
+    by_mod$subtr[3*(z-1)+2] <- by_mod$value[3*(z-1)+2] - by_mod$value[3*(z-1)+1]  
+    by_mod$subtr[3*(z-1)+3] <- by_mod$value[3*(z-1)+3] - by_mod$value[3*(z-1)+1]  
+}
+
+# calculate median values for labels
+medval <- agg_medians[,-1]
+medval$median <- NA
+for(i in 1:nrow(medval)){
+    same_AP <- which(by_mod$AP == medval$AP[i])
+    same_ratetype <- which(by_mod$type == medval$type[i])
+    medval$median[i] <- median(by_mod$subtr[intersect(same_AP, same_ratetype)])
+}
+
+pdf(file="Figure 4new - Evol rates relative to NOCT_3DEC.pdf", width = 14, height = 8)
+png(file="Figure 4new - Evol rates relative to NOCT_3DEC.png", width=12, height=7, res=600, unit="in")
+by_mod %>%
+    mutate(type = factor(type, levels = c("Speciation", "Extinction","Diversification"))) %>%
+    ggplot(aes(x = factor(AP, levels = c("Noct","Cath","Diur")), y = subtr)) +
+    geom_flat_violin(aes(fill = AP), position = position_nudge(x = .12, y = 0), alpha = .8) +
+    geom_point(aes(fill = AP), position = position_jitter(width = .02), shape = 21, size = 1.5, alpha = 0.4) + 
+    geom_boxplot(aes(fill = AP), width = .12, outlier.shape = NA, alpha = 0.6) +
+    theme_light(base_size = 24) +
+    theme(axis.text.x = element_text(vjust = 1, hjust = 0.5)) + #angle = 80, 
+    scale_fill_manual(values = cols <- c("#33DD00","#FFCC00","#2233FF")) +
+    scale_colour_manual(values = c("green3","gold2","dodgerblue3"))+#,"blue")) +
+    geom_hline(yintercept = 0, colour = alpha("#2233FF", 0.4), size = 3) +
+    geom_label(data = medval, aes(x = AP, y = median, label = round(median,3)),
+               nudge_x = -0.31, label.size = 0.07, label.padding = unit(0.2, "lines"), # Rectangle size around label
+               color = "black", fill=c("#6677FF","#33DD00","#FFCC00","#6677FF","#33DD00",
+                                       "#FFCC00","#6677FF","#33DD00","#FFCC00"), alpha=0.6) +
+    guides(fill = "none", color = "none") +
+    ylab("mean rate") +
+    xlab(NULL) +
+    #scale_x_discrete(guide = guide_axis(n.dodge = 2)) +
+    facet_wrap(~factor(type, levels = c("Speciation","Extinction","Diversification")), nrow = 1)
+dev.off()
+
+
+#### 2.3.1.4 Within-state relative rates --------------------------------------
 
 ## in each state, show the difference between nocturnal rates and diurnal or cathemeral
 rel_rates <- evol[,-c(25:48)] ## exclude columns of states not in any model 
@@ -964,7 +1046,7 @@ ggplot(tbr2, aes(x = rtype, y = log(value+10^-10), fill = rtype)) + # added 10^-
     annotate("rect", xmin = 0.45, xmax = 4.6, ymin = -24, ymax = log(2*10^-6), alpha=0.5, fill="grey") +
     scale_fill_manual(values = cols <- c("#AA22BB","gold1","#EE4444","#33AAFF")) +
     #scale_colour_manual(values = c("#5A4A6F", "#E47250","#EBB261", "#9D5A6C","#5A4A6F","#E47250","#EBB261", "#9D5A6C")) +
-    labs(y = expression(Transition~rate~~~ln(lineage^-1~Myr^-1)), 
+    labs(y = expression(Transition~rate~~ln(lineage^-1~Myr^-1)), 
          x = "Direction of transition (from -> to)") +
     geom_label(label = round(trn_medians$median_raw,2), data = trn_medians,
                x = c(1:4)-0.2, y = trn_medians$median_raw,
@@ -1030,23 +1112,32 @@ for(i in unique(avtran$rate)){
     trn_medians$median_agg[which(trn_medians$trn_rate == i)] <- median(log(avtran$value[which(avtran$rate == i)]))
 }
 
-avtran$rate <- factor(avtran$rate, levels=c("N->C","C->N","C->D","D->C"))
-pdf(file="Figure 5 - Transition rates estimate geom_means-not-transformed_7OCT.pdf", width = 12, height = 8)
-ggplot(avtran, aes(x = rate, y = value, fill = rate)) +
+# change names in figure as per Kate's comments 2/12/22
+avtran$rate[which(avtran$rate == "N->C")] <- "Noct -> Cath"
+avtran$rate[which(avtran$rate == "C->N")] <- "Cath -> Noct"
+avtran$rate[which(avtran$rate == "C->D")] <- "Cath -> Diur"
+avtran$rate[which(avtran$rate == "D->C")] <- "Diur -> Cath"
+avtran$rate <- factor(avtran$rate, levels=c("Noct -> Cath","Cath -> Noct","Cath -> Diur","Diur -> Cath"))
+
+#pdf(file="Figure 5new - Transition rates estimate geom_means_5DEC.pdf", width = 12, height = 8)
+png(file="Figure 5new - Transition rates estimate geom_means_5DEC.png", width=12, height=7, res=600, unit="in")
+ggplot(avtran, aes(x = rate, y = log(value), fill = rate)) +
     geom_flat_violin(position = position_nudge(x = .1, y = 0), alpha = .8) +
     geom_point(colour = "grey20", position = position_jitter(width = .02), shape = 16, 
                size = 1.2, alpha = 0.4) +
     geom_boxplot(width = .15, outlier.shape = NA, alpha = 0.7) +
-    theme_light(base_size = 26) +
-    theme(axis.text.x = element_text(vjust = 1, hjust = 1)) +
+    theme_light(base_size = 24) +
+    theme(axis.text.x = element_text(vjust = 1, hjust = 0.5)) +#, legend.position = c(0.4, 0.2)) +
     scale_fill_manual(values = cols <- c("#AA22BB","#EE4444","gold1","#33AAFF")) +
-    labs(y = expression(Transition~rate~~~~ln(lineage^-1~Myr^-1)), 
+    labs(y = expression(ln(transitions%.%lineage^-1%.%Myr^-1)), 
          x = "Direction of transition (from -> to)") +
     geom_label(label = round(trn_medians$median_agg,2), data = trn_medians,
                x = c(1:4)-0.2, y = trn_medians$median_agg,
                label.size = 0.5, label.padding = unit(0.3, "lines"), label.r = unit(0.1, "lines"),
                color = "black", fill = c("#AA22BB","#EE4444","gold1","#33AAFF"), alpha=0.3) +
     guides(fill = "none", color = "none")
+    
+    #p + guides(fill=guide_legend(title="Transition:"))
 dev.off()
 
 
