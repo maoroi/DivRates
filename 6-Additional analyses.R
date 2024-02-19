@@ -140,7 +140,6 @@ for(j in 1:length(allvar)){
          write.nexus(tree, file=paste0("ntree",allvar[j],".nex"))
       }
    }
-
    # now that the tree is aligned with taxonomy, align the data to tree tips
    act <- act[which(act$Phylo_name %in% tree$tip.label),]
 }
@@ -149,6 +148,55 @@ for(j in 1:length(allvar)){
 # 2. Example of data distribution on a phylogeny --------------------------
 
 
+phy1 <- read.tree("UltMCC_2424spp_4AP_5kvars.nex")
+tree <- ladderize(phy1)
+
+label <- character(length(tree$tip.label))
+names(label) <- act[which(act$Phylo_name %in% tree$tip.label),6]
+label[act$AP=="Nocturnal"] <- "dodgerblue3"
+label[act$AP=="Cathemeral"] <- "green3"
+label[act$AP=="Diurnal"] <- "gold"
+label[act$AP=="Crepuscular"] <- "magenta2"
+label[which(label[] == '')] <- "white"
+
+# ** change this to use original tip labels for taxonomic labeling
+{artio <- getMRCA(tree,c(which(tree$tip.label %in% act$Phylo_name[which(act$Order == 'Artiodactyla')])))
+   chiro <- getMRCA(tree,c(which(tree$tip.label %in% act$Phylo_name[which(act$Order == 'Chiroptera')])))
+   carni <- getMRCA(tree,c(which(tree$tip.label %in% act$Phylo_name[which(act$Order == 'Carnivora')])))
+   prim <- getMRCA(tree,c(which(tree$tip.label %in% act$Phylo_name[which(act$Order == 'Primates')])))
+   roden <- getMRCA(tree,c(which(tree$tip.label %in% act$Phylo_name[which(act$Order == 'Rodentia')])))
+   eulip <- getMRCA(tree,c(which(tree$tip.label %in% act$Phylo_name[which(act$Order %in% c('Erinaceomorpha','Soricomorpha'))])))
+   xenar <- getMRCA(tree,c(which(tree$tip.label %in% act$Phylo_name[which(act$Order %in% c('Cingulata','Pholidota','Pilosa'))])))
+   afro <- getMRCA(tree,c(which(tree$tip.label %in% act$Phylo_name[which(act$Order %in% c('Afrosoricida','Hyracoidea','Macroscelidea','Proboscidea','Sirenia','Tubulidentata'))])))
+}
+orders <- c(afro, xenar, eulip, chiro, roden, artio, prim, carni)
+labels <- c("Afrotheria","Xenarthra","Eulipotyphla","Chiroptera","Rodentia","Artiodactyla","Primates","Carnivora")
+
+pdf(file="DataMCC.pdf",width=40, height=40)
+plot(tree, type = "fan", lwd = 0.4, label.offset = 0.4, cex = 0.3, show.tip.label = TRUE,
+     tip.color = "white")#, edge.color = BemEDGE[,3])
+ring(20, tree, style = "ring", offset = 5, col = label[tree$tip.label])
+# adding arcs for orders
+for(i in 1:4){#length(orders)) {
+   arc.cladelabels(tree, labels[i], orders[i], cex=6,
+                   MoreArgs = list(mark.node=FALSE, lab.offset=25, wing.length=0.5))
+}
+#ring(, tree, style = "ring", offset = -65.5, col = alpha("gray50", 0.25))
+dev.off()
+
+##OPTIONAL:
+# colour main order brnaches
+colours <- c("brown","cyan","green4","blue","darkorange2","goldenrod1","purple4","gray64")
+for (k in 1:length(orders)) {
+   AncNode <- orders[k]
+   CladeSpp <- Descendants(tree, AncNode, type="all")
+   edges <- BemEDGE[which(BemEDGE[,2] %in% CladeSpp),]
+   BemEDGE[which(BemEDGE[,2] == AncNode),3] <- as.character(colours[k]) ## colouring the order root branch
+   for (i in 1:length(edges[,2])) {
+      edges[i,3] <- as.character(colours[k])
+      BemEDGE[which(BemEDGE[,2] == edges[i,2]),3] <- edges[i,3]
+   }
+}
 
 # 3. Simmap reconstruction with LTT plot for timeline ---------------------
 
@@ -172,15 +220,15 @@ str(AP)
 qmat <- matrix(c(0, 1, 0, 2, 0, 3, 0, 4, 0), 3)
 
 for(j in 1:length(allvar)){
-   tree <- read.nexus(paste0("ntree",allvar[j],".nex"))
+   tree <- read.nexus(paste0("SIMMAP/ntree",allvar[j],".nex"))
    tree <- drop.tip(tree, which(!tree$tip.label %in% names(AP)))
 
    # run SIMMAP and calculate LTT - these two lines take LONG
    maps <- make.simmap(tree, AP, model=qmat, pi="fitzjohn", nsim=100)
    ltts <- ltt(maps)
 
-   saveRDS(maps, file=paste0("simmap",allvar[j],".RDS"))
-   saveRDS(ltts, file=paste0("LTTs_",allvar[j],".RDS"))
+   saveRDS(maps, file=paste0("SIMMAP/simmap",allvar[j],".RDS"))
+   saveRDS(ltts, file=paste0("SIMMAP/LTTs_",allvar[j],".RDS"))
 }
 
 
@@ -199,17 +247,230 @@ clip(0,max(nodeHeights(cld)),1/length(maps),1000)
 grid()
 dev.off()
 
-
 ####  END REVELL CODE  #########
-saveRDS(maps, file=paste0("simmap",tree,".RDS"))
+
 
 # 4. Run models of HiSSE with root.type="herr_als" ------------------------
 
+library(hisse)
+set.seed(88)
+
+# start with a fresh copy of the data to ensure consistency
+act <- read.csv("ActivityData_FEB24.csv", header = TRUE)
+# remove crepusculars
+length(which(act$AP == 'Crepuscular')) == 24
+act3 <- act[-which(act$AP == 'Crepuscular'),]
+
+# convert to numbers
+act3$AP <- as.character(act3$AP)
+act3$AP[act3$AP == 'Nocturnal'] <- 1
+act3$AP[act3$AP == 'Cathemeral'] <- 2
+act3$AP[act3$AP == 'Diurnal'] <- 3
 
 
-# 5. Run a few examples of SecSSE to compare results  ---------------------
+## setup the unvarying part of the model
+f <- read.csv("f.csv")
+f <- f[,2]
+
+# MuHiSSE model params
+n <- 4
+set_to_0 <- 4*(1:n)-1
+TO_rates <- c(1,2,0,3, 4,5,0,6, 7,8,0,9, 10,11,0,12, 13,14,0,15, 16,17,0,18, 19,20,0,21, 22,23,0,24)
+drops <- c(2,5,6,8, 10,13,14,16, 18,21,22,24, 26,29,30,32, 34,37,38,40, 42,45,46,48, 50,53,54,56, 58,61,62,64)
+
+# diversification rates for MuHiSSE
+turnover <- TO_rates[1:(4*n)]
+extinction.fraction <- rep(1,4*n)
+extinction.fraction[set_to_0] <- 0
+
+# transition matrix
+trans.rate <- TransMatMakerMuHiSSE(hidden.traits=n-1, include.diagonals = FALSE, cat.trans.vary = TRUE)
+trans.rate.mod <- ParDrop(trans.rate, drops[1:(4*n)])
+trans.rate.mod[,set_to_0] <- 0
+diag(trans.rate.mod) <- NA
+
+## iterate over all phylogenetic trees
+allvar <- c("0028","0612","0677","1030","1166","1774","1845","2966","3865","4496","5024","5221",
+            "5333","5455","5684","5844","6259","6375","6404","6668","7198","7306","8981","9128",
+            "0320","0369","0400","0647","0675","0772","0911","0917","1017","1233","1322","1350",
+            "1564","1575","1666","1777","1803","1805","1816","1823","1904","2154","2316","2417",
+            "2555","2953","2981","3019","3046","3120","3152","3168","3229","3349","3490","3599",
+            "3734","3756","3766","3824","4012","4029","4224","4304","4387","4420","4423","4439",
+            "4467","4568","4683","4831","4945","5039","5133","5242","5272","5338","5340","5568",
+            "5594","5976","6255","6345","6747","6760","6774","6865","6914","6935","6947","6972",
+            "7009","7051","7072","7074","7180","7444","7549","7627","7983","8004","8156","8307",
+            "8377","8394","8429","8573","8705","8775","8974","9011","9023","9455","9572","9743",
+            "9873","9923","9989","9997")
+
+if(length(allvar) != 124) {allvar <- numeric()}
+
+for(j in 1:length(allvar)){
+   tree <- read.nexus(paste0("SIMMAP/ntree",allvar[j],".nex"))
+   tree <- drop.tip(tree, which(!tree$tip.label %in% act3$Phylo_name))
 
 
+   # transform to binary data
+   for (i in 1:length(tree$tip.label)){
+      tree$tip.state[i] <- as.numeric(act3$AP[which(act3$Phylo_name == tree$tip.label[i])])
+   }
+
+   states <- data.frame(tree$tip.label, tree$tip.state, tree$tip.state)
+   states.trans <- states
+   for(i in 1:Ntip(tree)){
+      if(states[i,2] == 1){
+         states.trans[i,2] = 0
+         states.trans[i,3] = 0
+      }
+      if(states[i,2] == 2){
+         states.trans[i,2] = 0
+         states.trans[i,3] = 1
+      }
+      if(states[i,2] == 3){
+         states.trans[i,2] = 1
+         states.trans[i,3] = 1
+      }
+   }
+
+   # model
+   model <- MuHiSSE(phy=tree, data=states.trans, f=f,
+                    turnover=turnover,
+                    eps=extinction.fraction,
+                    hidden.states=TRUE,
+                    trans.rate=trans.rate.mod,
+                    root.type="herr_als",
+                    turnover.upper=1000,
+                    sann = TRUE)
+
+   saveRDS(model, file=paste0("MuHiSSE",n,"_herr-als_tree", allvar[j],".RDS"))
+}
+
+
+# 5. Run models of HiSSE with ext_frac instead of turnover_rates ----------
+
+## preparation steps are the same regardless of root.type
+
+library(hisse)
+set.seed(88)
+
+# start with a fresh copy of the data to ensure consistency
+act <- read.csv("ActivityData_FEB24.csv", header = TRUE)
+# remove crepusculars
+length(which(act$AP == 'Crepuscular')) == 24
+act3 <- act[-which(act$AP == 'Crepuscular'),]
+
+# convert to numbers
+act3$AP <- as.character(act3$AP)
+act3$AP[act3$AP == 'Nocturnal'] <- 1
+act3$AP[act3$AP == 'Cathemeral'] <- 2
+act3$AP[act3$AP == 'Diurnal'] <- 3
+
+## sampled proportion by AP
+f <- read.csv("f.csv")
+f <- f[,2]
+
+
+# MuHiSSE model params
+n <- 4
+set_to_0 <- 4*(1:n)-1
+ext_frac <- c(1,2,0,3, 4,5,0,6, 7,8,0,9, 10,11,0,12, 13,14,0,15, 16,17,0,18, 19,20,0,21, 22,23,0,24)
+drops <- c(2,5,6,8, 10,13,14,16, 18,21,22,24, 26,29,30,32, 34,37,38,40, 42,45,46,48, 50,53,54,56, 58,61,62,64)
+
+# diversification rates for MuHiSSE
+turnover <- rep(1,4*n)
+turnover[set_to_0] <- 0
+extinction.fraction <- ext_frac[1:(4*n)]
+
+# transition matrix
+trans.rate <- TransMatMakerMuHiSSE(hidden.traits=n-1, include.diagonals = FALSE, cat.trans.vary = TRUE)
+trans.rate.mod <- ParDrop(trans.rate, drops[1:(4*n)])
+trans.rate.mod[,set_to_0] <- 0
+diag(trans.rate.mod) <- NA
+
+
+## 5.1 Estimating ext_frac while holding turnover rates constant ----------
+
+for(j in 1:length(allvar)){
+   tree <- read.nexus(paste0("SIMMAP/ntree",allvar[j],".nex"))
+   tree <- drop.tip(tree, which(!tree$tip.label %in% act3$Phylo_name))
+
+
+   # transform to binary data
+   for (i in 1:length(tree$tip.label)){
+      tree$tip.state[i] <- as.numeric(act3$AP[which(act3$Phylo_name == tree$tip.label[i])])
+   }
+
+   states <- data.frame(tree$tip.label, tree$tip.state, tree$tip.state)
+   states.trans <- states
+   for(i in 1:Ntip(tree)){
+      if(states[i,2] == 1){
+         states.trans[i,2] = 0
+         states.trans[i,3] = 0
+      }
+      if(states[i,2] == 2){
+         states.trans[i,2] = 0
+         states.trans[i,3] = 1
+      }
+      if(states[i,2] == 3){
+         states.trans[i,2] = 1
+         states.trans[i,3] = 1
+      }
+   }
+
+   # model
+   model <- MuHiSSE(phy=tree, data=states.trans, f=f,
+                    turnover=turnover,
+                    eps=extinction.fraction,
+                    hidden.states=TRUE,
+                    trans.rate=trans.rate.mod,
+                    root.type="madfitz",
+                    eps.upper=0.999,
+                    sann = TRUE)
+
+   saveRDS(model, file=paste0("MuHiSSE",n,"_madfitz_ExtFrac_tree", allvar[j],".RDS"))
+}
+
+
+## 5.2 Same as 5.1 but w root.type="herr_als" for comparison --------------
+
+for(j in 1:length(allvar)){
+   tree <- read.nexus(paste0("SIMMAP/ntree",allvar[j],".nex"))
+   tree <- drop.tip(tree, which(!tree$tip.label %in% act3$Phylo_name))
+
+
+   # transform to binary data
+   for (i in 1:length(tree$tip.label)){
+      tree$tip.state[i] <- as.numeric(act3$AP[which(act3$Phylo_name == tree$tip.label[i])])
+   }
+
+   states <- data.frame(tree$tip.label, tree$tip.state, tree$tip.state)
+   states.trans <- states
+   for(i in 1:Ntip(tree)){
+      if(states[i,2] == 1){
+         states.trans[i,2] = 0
+         states.trans[i,3] = 0
+      }
+      if(states[i,2] == 2){
+         states.trans[i,2] = 0
+         states.trans[i,3] = 1
+      }
+      if(states[i,2] == 3){
+         states.trans[i,2] = 1
+         states.trans[i,3] = 1
+      }
+   }
+
+   # model
+   model <- MuHiSSE(phy=tree, data=states.trans, f=f,
+                    turnover=turnover,
+                    eps=extinction.fraction,
+                    hidden.states=TRUE,
+                    trans.rate=trans.rate.mod,
+                    root.type="herr_als",
+                    eps.upper=0.999,
+                    sann = TRUE)
+
+   saveRDS(model, file=paste0("MuHiSSE",n,"_herrals_ExtFrac_tree", allvar[j],".RDS"))
+}
 
 # 6. CorHMM reconstruction as well (if necessary) -------------------------
 
